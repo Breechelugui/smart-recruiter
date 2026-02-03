@@ -2,24 +2,27 @@ import { useEffect, useState, useMemo, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import PageWrapper from "../../../components/layout/PageWrapper";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
-import { fetchSubmissions, submitSubmission } from "../../submissions/submissionsSlice";
+import { fetchSubmissions, fetchSubmissionById, submitSubmission } from "../../submissions/submissionsSlice";
 import { saveAnswer } from "../../submissions/submissionsSlice";
 import BackToDashboardButton from "../../../components/common/BackToDashboardButton";
+import CountdownTimer from "../../../components/common/CountdownTimer";
 import { Editor } from "@monaco-editor/react";
 
 export default function ActiveTest() {
   const { id: submissionId } = useParams();
-  const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { items, loading, error } = useAppSelector((s) => s.submissions);
+  const dispatch = useAppDispatch();
+  const { submission, loading, error } = useAppSelector((state) => state.submissions);
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
-  const [currentStep, setCurrentStep] = useState(0); // 0: BDD, 1: Pseudocode, 2: Code
   const [answers, setAnswers] = useState({});
-  const [timeRemaining, setTimeRemaining] = useState(30 * 60); // 30 minutes default (will be updated)
+  const [message, setMessage] = useState({ type: "", text: "" });
+  const [selectedLanguage, setSelectedLanguage] = useState("javascript");
+  const [timeLimit, setTimeLimit] = useState(30); // Default 30 minutes
+  const [currentStep, setCurrentStep] = useState(0); // Whiteboard step (0: BDD, 1: Pseudocode, 2: Code)
+  const [consoleOutput, setConsoleOutput] = useState([]);
   const intervalRef = useRef(null);
 
-  const submission = items.find((s) => s.id === Number(submissionId));
   const assessment = submission?.assessment;
   const questions = assessment?.questions || [];
   const currentQuestion = questions[currentQuestionIndex];
@@ -32,11 +35,22 @@ export default function ActiveTest() {
   ];
 
   useEffect(() => {
-    dispatch(fetchSubmissions());
-  }, [dispatch]);
+    if (submissionId) {
+      dispatch(fetchSubmissionById(submissionId));
+    }
+  }, [dispatch, submissionId]);
+
+  // Check if assessment is already submitted and redirect
+  useEffect(() => {
+    if (submission && (submission.status === 'submitted' || submission.status === 'graded')) {
+      alert("This assessment has already been submitted.");
+      navigate("/interviewee");
+      return;
+    }
+  }, [submission, navigate]);
 
   console.log("ActiveTest submissionId:", submissionId);
-  console.log("Submissions:", items);
+  console.log("Submissions:", submission);
   console.log("Found submission:", submission);
   console.log("Full submission structure:", JSON.stringify(submission, null, 2));
   console.log("Assessment:", assessment);
@@ -45,43 +59,18 @@ export default function ActiveTest() {
 
   useEffect(() => {
     // Check multiple possible locations for time_limit
-    const timeLimit = assessment?.time_limit || 
-                      assessment?.assessment_detail?.time_limit || 
-                      assessment?.assessment_data?.time_limit ||
-                      submission?.assessment?.time_limit;
+    const foundTimeLimit = assessment?.time_limit || 
+                          assessment?.assessment_detail?.time_limit || 
+                          assessment?.assessment_data?.time_limit ||
+                          submission?.assessment?.time_limit;
     
-    if (timeLimit) {
-      setTimeRemaining(timeLimit * 60);
-      console.log("Setting time remaining to:", timeLimit * 60, "seconds (from time_limit:", timeLimit, ")");
+    if (foundTimeLimit) {
+      setTimeLimit(foundTimeLimit);
+      console.log("Setting time limit to:", foundTimeLimit, "minutes");
     } else {
       console.log("No time_limit found in any location, using default 30 minutes");
-      console.log("Checked locations:");
-      console.log("- assessment.time_limit:", assessment?.time_limit);
-      console.log("- assessment.assessment_detail.time_limit:", assessment?.assessment_detail?.time_limit);
-      console.log("- assessment.assessment_data.time_limit:", assessment?.assessment_data?.time_limit);
-      console.log("- submission.assessment.time_limit:", submission?.assessment?.time_limit);
     }
   }, [assessment, submission]);
-
-  useEffect(() => {
-    intervalRef.current = setInterval(() => {
-      setTimeRemaining((prev) => {
-        if (prev <= 1) {
-          clearInterval(intervalRef.current);
-          handleSubmit();
-          return 0;
-        }
-        return prev - 1;
-      });
-    }, 1000);
-    return () => clearInterval(intervalRef.current);
-  }, []);
-
-  const formatTime = (seconds) => {
-    const mins = Math.floor(seconds / 60);
-    const secs = seconds % 60;
-    return `${mins}:${secs.toString().padStart(2, "0")}`;
-  };
 
   // Get answer key for current question and step
   const getAnswerKey = () => {
@@ -114,8 +103,13 @@ export default function ActiveTest() {
   };
 
   const handleSubmit = async () => {
-    clearInterval(intervalRef.current);
-    
+    // Check if submission already exists and is submitted FIRST
+    if (submission && (submission.status === 'submitted' || submission.status === 'graded')) {
+      alert("This assessment has already been submitted.");
+      navigate("/interviewee");
+      return;
+    }
+
     // Only save answers if submission is still in progress
     if (submission.status === 'in_progress') {
       // Save each answer individually using the proper API
@@ -157,7 +151,13 @@ export default function ActiveTest() {
       navigate("/interviewee");
     } catch (error) {
       console.error("Failed to submit:", error);
-      alert("Failed to submit assessment: " + (error.message || "Unknown error"));
+      const errorMessage = error.message || "Unknown error";
+      if (errorMessage.includes("already submitted")) {
+        alert("This assessment has already been submitted.");
+        navigate("/interviewee");
+      } else {
+        alert("Failed to submit assessment: " + errorMessage);
+      }
     }
   };
 
@@ -258,12 +258,12 @@ function validateLogin(credentials) {
               <h1 className="text-2xl font-bold text-white">{assessment.title}</h1>
               <p className="text-gray-300">Question {currentQuestionIndex + 1} of {questions.length}</p>
             </div>
-            <div className="text-right">
-              <p className="text-sm text-gray-400">Time Remaining</p>
-              <p className={`text-2xl font-bold ${timeRemaining < 300 ? 'text-red-400' : 'text-white'}`}>
-                {formatTime(timeRemaining)}
-              </p>
-            </div>
+            <CountdownTimer
+              timeLimit={timeLimit}
+              submissionId={submissionId}
+              onTimeExpire={handleSubmit}
+              className="bg-gray-800/50 backdrop-blur-sm"
+            />
           </div>
         </div>
 
@@ -367,9 +367,29 @@ function validateLogin(credentials) {
             ) : (
               // Code - Monaco Editor
               <div className="border border-gray-600 rounded-xl overflow-hidden">
+                {/* Language Selector */}
+                <div className="bg-gray-700 px-4 py-2 border-b border-gray-600 flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-300">Language:</label>
+                  <select
+                    value={selectedLanguage}
+                    onChange={(e) => setSelectedLanguage(e.target.value)}
+                    className="bg-gray-600 text-white text-sm px-3 py-1 rounded border border-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  >
+                    <option value="javascript">JavaScript</option>
+                    <option value="python">Python</option>
+                    <option value="java">Java</option>
+                    <option value="cpp">C++</option>
+                    <option value="csharp">C#</option>
+                    <option value="typescript">TypeScript</option>
+                    <option value="php">PHP</option>
+                    <option value="ruby">Ruby</option>
+                    <option value="go">Go</option>
+                    <option value="rust">Rust</option>
+                  </select>
+                </div>
                 <Editor
                   height="400px"
-                  defaultLanguage="javascript"
+                  language={selectedLanguage}
                   value={getCurrentAnswer()}
                   onChange={(value) => handleAnswerChange(value || "")}
                   theme="vs-dark"

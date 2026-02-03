@@ -255,7 +255,7 @@ export default function RecruiterDashboard() {
 
                         <div className="flex flex-col sm:flex-row gap-3 lg:ml-6">
                           <button
-                            onClick={() => navigate(`/recruiter/grade/${submission.id}`)}
+                            onClick={() => navigate(`/recruiter/submissions/${submission.id}`)}
                             className="bg-gradient-to-r from-orange-600 to-red-600 hover:from-orange-700 hover:to-red-700 text-white px-6 py-3 rounded-xl font-semibold shadow-lg hover:shadow-xl transition-all duration-200 transform hover:scale-105"
                           >
                             <div className="flex items-center gap-2">

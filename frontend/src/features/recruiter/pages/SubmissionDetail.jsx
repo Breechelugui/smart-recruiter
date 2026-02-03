@@ -29,30 +29,22 @@ export default function SubmissionDetail() {
 
   useEffect(() => {
     const sub = submissions.find((s) => s.id === Number(id));
-    console.log('Found submission:', sub);
-    console.log('Submission answers:', sub?.answers);
     if (sub) {
       setSubmission(sub);
       // Convert answers array to object for easier access
       const answersObj = {};
       if (sub.answers && Array.isArray(sub.answers)) {
-        console.log('Processing answers array:', sub.answers);
         sub.answers.forEach(answer => {
-          console.log('Processing answer:', answer);
           // For coding questions, use code_solution, otherwise use answer_text
           const question = assessments.find(a => a.id === sub.assessment_id)?.questions?.find(q => q.id === answer.question_id);
-          console.log('Found question:', question);
           if (question?.question_type === 'coding') {
             // Try code_solution first, then answer_text as fallback
             answersObj[answer.question_id] = answer.code_solution || answer.answer_text || '';
-            console.log('Set coding answer:', answer.question_id, answersObj[answer.question_id]);
           } else {
             answersObj[answer.question_id] = answer.answer_text || '';
-            console.log('Set text answer:', answer.question_id, answer.answer_text);
           }
         });
       }
-      console.log('Final answers object:', answersObj);
       setAnswers(answersObj);
       
       const ass = assessments.find((a) => a.id === sub.assessment_id);
@@ -120,11 +112,33 @@ export default function SubmissionDetail() {
     navigate("/recruiter/results");
   };
 
-  if (submissionsLoading || assessmentsLoading || !submission || !assessment) {
+  if (submissionsLoading || assessmentsLoading) {
     return (
       <PageWrapper>
         <div className="max-w-4xl mx-auto p-6">
           <p className="text-sm text-slate-600">Loading submission...</p>
+        </div>
+      </PageWrapper>
+    );
+  }
+
+  if (!submission) {
+    return (
+      <PageWrapper>
+        <div className="max-w-4xl mx-auto p-6">
+          <p className="text-sm text-slate-600">Submission not found.</p>
+          <p className="text-xs text-slate-500 mt-2">Debug: ID={id}, Submissions={submissions.length}</p>
+        </div>
+      </PageWrapper>
+    );
+  }
+
+  if (!assessment) {
+    return (
+      <PageWrapper>
+        <div className="max-w-4xl mx-auto p-6">
+          <p className="text-sm text-slate-600">Assessment not found.</p>
+          <p className="text-xs text-slate-500 mt-2">Debug: Assessment ID={submission?.assessment_id}, Assessments={assessments.length}</p>
         </div>
       </PageWrapper>
     );
@@ -200,11 +214,6 @@ export default function SubmissionDetail() {
                 </div>
               </div>
 
-              {/* Debug info */}
-              <div className="mt-2 p-2 bg-yellow-50 border border-yellow-200 rounded text-xs">
-                <strong>Debug:</strong> {JSON.stringify(answers[q.id])}
-              </div>
-              
               {/* Answer display */}
               <div className="mt-4">
                 <p className="text-xs font-semibold text-slate-500 mb-2">Candidate Answer:</p>
