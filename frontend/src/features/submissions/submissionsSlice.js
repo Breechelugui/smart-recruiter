@@ -5,6 +5,7 @@ import { fetchInvitations } from "../invitations/invitationsSlice";
 
 const initialState = {
   items: [],
+  submission: null,
   loading: false,
   error: null,
 };
@@ -14,6 +15,20 @@ export const fetchSubmissions = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const { data } = await apiClient.get("/api/submissions");
+      return data;
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      const message = typeof detail === "string" ? detail : JSON.stringify(detail);
+      return rejectWithValue(message);
+    }
+  }
+);
+
+export const fetchSubmissionById = createAsyncThunk(
+  "submissions/fetchSubmissionById",
+  async (submissionId, { rejectWithValue }) => {
+    try {
+      const { data } = await apiClient.get(`/api/submissions/${submissionId}`);
       return data;
     } catch (err) {
       const detail = err?.response?.data?.detail;
@@ -100,6 +115,18 @@ const submissionsSlice = createSlice({
         state.loading = false;
         state.error = action.payload || "Failed to load submissions";
       })
+      .addCase(fetchSubmissionById.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(fetchSubmissionById.fulfilled, (state, action) => {
+        state.loading = false;
+        state.submission = action.payload;
+      })
+      .addCase(fetchSubmissionById.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "Failed to load submission";
+      })
       .addCase(startSubmission.fulfilled, (state, action) => {
         state.items = [action.payload, ...state.items];
       })
@@ -114,7 +141,10 @@ const submissionsSlice = createSlice({
           if (!state.items[submissionIdx].answers) {
             state.items[submissionIdx].answers = [];
           }
-          const answerIdx = state.items[submissionIdx].answers.findIndex((a) => a.question_id === action.payload.question_id);
+          // Update or add the answer
+          const answerIdx = state.items[submissionIdx].answers.findIndex(
+            (a) => a.question_id === action.payload.question_id
+          );
           if (answerIdx !== -1) {
             state.items[submissionIdx].answers[answerIdx] = action.payload;
           } else {
