@@ -56,7 +56,18 @@ export default function CreateAssessment() {
   };
 
   const handleImportKata = (kataData) => {
-    setQuestions([...questions, kataData]);
+    const newQuestion = {
+      question_text: kataData.description,
+      title: kataData.title,
+      question_type: kataData.type,
+      points: kataData.points,
+      time_limit: kataData.time_limit,
+      options: kataData.options || [],
+      codewars_kata_id: kataData.codewars_kata_id,
+      languages: kataData.languages,
+      difficulty: kataData.difficulty,
+    };
+    setQuestions([...questions, newQuestion]);
     setShowCodeWars(false);
   };
 
@@ -81,11 +92,15 @@ export default function CreateAssessment() {
     const payload = {
       ...form,
       questions: questions.map((q) => ({
-        title: q.question_text.slice(0, 100), // backend expects title; truncate for safety
+        title: q.title || q.question_text.slice(0, 100),
         question_text: q.question_text,
         question_type: q.question_type,
         points: q.points,
+        time_limit: q.time_limit || 30,
         ...(q.question_type === "multiple_choice" && { options: q.options }),
+        ...(q.codewars_kata_id && { codewars_kata_id: q.codewars_kata_id }),
+        ...(q.languages && { languages: q.languages }),
+        ...(q.difficulty && { difficulty: q.difficulty }),
       })),
     };
     
