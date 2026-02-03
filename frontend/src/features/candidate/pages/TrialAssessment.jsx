@@ -9,7 +9,8 @@ import { Editor } from "@monaco-editor/react";
 export default function TrialAssessment() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { loading } = useAppSelector((s) => s.submissions);
+  const { id: assessmentId } = useParams();
+  const { assessments, loading } = useAppSelector((state) => state.assessments);
 
   const [currentStep, setCurrentStep] = useState(0);
   const [answers, setAnswers] = useState({
@@ -17,6 +18,7 @@ export default function TrialAssessment() {
     pseudocode: "",
     code: ""
   });
+  const [selectedLanguage, setSelectedLanguage] = useState("javascript");
 
   const trialSteps = [
     {
@@ -173,9 +175,29 @@ And: The session should be terminated`
                   Implementation Code
                 </label>
                 <div className="border border-gray-600 rounded-xl overflow-hidden">
+                  {/* Language Selector */}
+                  <div className="bg-gray-700 px-4 py-2 border-b border-gray-600 flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-300">Language:</label>
+                    <select
+                      value={selectedLanguage}
+                      onChange={(e) => setSelectedLanguage(e.target.value)}
+                      className="bg-gray-600 text-white text-sm px-3 py-1 rounded border border-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="javascript">JavaScript</option>
+                      <option value="python">Python</option>
+                      <option value="java">Java</option>
+                      <option value="cpp">C++</option>
+                      <option value="csharp">C#</option>
+                      <option value="typescript">TypeScript</option>
+                      <option value="php">PHP</option>
+                      <option value="ruby">Ruby</option>
+                      <option value="go">Go</option>
+                      <option value="rust">Rust</option>
+                    </select>
+                  </div>
                   <Editor
                     height="400px"
-                    defaultLanguage="javascript"
+                    language={selectedLanguage}
                     value={answers.code}
                     onChange={(value) => handleAnswerChange("code", value || "")}
                     theme="vs-dark"
