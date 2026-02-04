@@ -7,15 +7,13 @@ import { useAppDispatch } from "../app/hooks";
 import useAuth from "../hooks/useAuth";
 import { loadMe } from "../features/auth/authSlice";
 
+
 /* Recruiter pages */
 import RecruiterDashboard from "../features/recruiter/pages/Dashboard";
 import RecruiterAssessments from "../features/recruiter/pages/Assessments";
 import CreateAssessment from "../features/recruiter/pages/CreateAssessment";
-
 import RecruiterSubmissionDetail from "../features/recruiter/pages/SubmissionDetail";
-
 import RecruiterInvitations from "../features/recruiter/pages/Invitations";
-
 import RecruiterResults from "../features/recruiter/pages/Results";
 
 /* Candidate pages */
@@ -24,6 +22,9 @@ import CandidateInvitations from "../features/candidate/pages/Invitations";
 import CandidatePracticeTest from "../features/candidate/pages/PracticeTest";
 import CandidateActiveTest from "../features/candidate/pages/ActiveTest";
 import ActiveTestDemo from "../features/candidate/pages/ActiveTestDemo";
+
+/* Profile Management */
+import ProfileManagement from "../components/common/ProfileManagement";
 
 export default function AppRoutes() {
   const dispatch = useAppDispatch();
@@ -50,6 +51,7 @@ export default function AppRoutes() {
         }
       />
       <Route path="/login" element={<Login />} />
+      
 
       {/* Legacy candidate routes (redirect) */}
       <Route path="/candidate" element={<Navigate to="/interviewee" replace />} />
@@ -108,7 +110,7 @@ export default function AppRoutes() {
       />
 
       <Route
-        path="/recruiter/submission/:id"
+        path="/recruiter/submissions/:id"
         element={
           <PrivateRoute>
             <RoleRoute role="recruiter">
@@ -124,6 +126,17 @@ export default function AppRoutes() {
           <PrivateRoute>
             <RoleRoute role="recruiter">
               <RecruiterResults />
+            </RoleRoute>
+          </PrivateRoute>
+        }
+      />
+
+      <Route
+        path="/recruiter/profile"
+        element={
+          <PrivateRoute>
+            <RoleRoute role="recruiter">
+              <ProfileManagement />
             </RoleRoute>
           </PrivateRoute>
         }
@@ -158,6 +171,17 @@ export default function AppRoutes() {
           <PrivateRoute>
             <RoleRoute role="interviewee">
               <CandidatePracticeTest />
+            </RoleRoute>
+          </PrivateRoute>
+        }
+      />
+
+      <Route
+        path="/interviewee/profile"
+        element={
+          <PrivateRoute>
+            <RoleRoute role="interviewee">
+              <ProfileManagement />
             </RoleRoute>
           </PrivateRoute>
         }
