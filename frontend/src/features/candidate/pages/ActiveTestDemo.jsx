@@ -8,12 +8,13 @@ import { Editor } from "@monaco-editor/react";
 
 export default function ActiveTestDemo() {
   const { id: assessmentId } = useParams();
-  const dispatch = useAppDispatch();
   const navigate = useNavigate();
-  const { items: assessments, loading } = useAppSelector((s) => s.assessments);
+  const dispatch = useAppDispatch();
+  const { assessments, loading } = useAppSelector((state) => state.assessments);
 
   const [currentQuestionIndex, setCurrentQuestionIndex] = useState(0);
   const [answers, setAnswers] = useState({});
+  const [selectedLanguage, setSelectedLanguage] = useState("javascript");
 
   const assessment = assessments.find((a) => a.id === Number(assessmentId));
   const questions = assessment?.questions || [];
@@ -109,21 +110,42 @@ export default function ActiveTestDemo() {
             ) : currentQuestion?.type === "coding" ? (
               <div className="space-y-2">
                 <label className="block text-xs font-semibold text-slate-500 mb-2">Your Code</label>
-                <Editor
-                  height="300px"
-                  defaultLanguage="javascript"
-                  value={answers[currentQuestion.id] || ""}
-                  onChange={(value) => handleAnswerChange(currentQuestion.id, value || "")}
-                  theme="vs-light"
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 14,
-                    lineNumbers: "on",
-                    roundedSelection: false,
-                    scrollBeyondLastLine: false,
-                    automaticLayout: true,
-                  }}
-                />
+                <div className="border border-gray-600 rounded-xl overflow-hidden">
+                  {/* Language Selector */}
+                  <div className="bg-gray-700 px-4 py-2 border-b border-gray-600 flex items-center justify-between">
+                    <label className="text-sm font-medium text-gray-300">Language:</label>
+                    <select
+                      value={selectedLanguage}
+                      onChange={(e) => setSelectedLanguage(e.target.value)}
+                      className="bg-gray-600 text-white text-sm px-3 py-1 rounded border border-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                    >
+                      <option value="javascript">JavaScript</option>
+                      <option value="python">Python</option>
+                      <option value="java">Java</option>
+                      <option value="cpp">C++</option>
+                      <option value="csharp">C#</option>
+                      <option value="typescript">TypeScript</option>
+                      <option value="php">PHP</option>
+                      <option value="ruby">Ruby</option>
+                      <option value="go">Go</option>
+                      <option value="rust">Rust</option>
+                    </select>
+                  </div>
+                  <Editor
+                    height="300px"
+                    language={selectedLanguage}
+                    value={answers[currentQuestion.id] || ""}
+                    onChange={(value) => handleAnswerChange(currentQuestion.id, value || "")}
+                    theme="vs-dark"
+                    options={{
+                      minimap: { enabled: false },
+                      fontSize: 14,
+                      lineNumbers: "on",
+                      scrollBeyondLastLine: false,
+                      wordWrap: "on",
+                    }}
+                  />
+                </div>
               </div>
             ) : (
               <textarea

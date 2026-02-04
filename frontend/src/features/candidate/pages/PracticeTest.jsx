@@ -1,5 +1,5 @@
-import { useEffect, useMemo, useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useEffect, useState, useMemo } from "react";
+import { useParams, useNavigate } from "react-router-dom";
 import PageWrapper from "../../../components/layout/PageWrapper";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
 import { fetchAssessments } from "../../assessments/assessmentSlice";
@@ -16,12 +16,14 @@ export default function PracticeTest() {
   const { items: submissions, loading: submissionsLoading } = useAppSelector((s) => s.submissions);
 
   useEffect(() => {
-    dispatch(fetchAssessments());
-    dispatch(fetchSubmissions());
-  }, [dispatch]);
+    if (auth.user) {
+      dispatch(fetchAssessments());
+      dispatch(fetchSubmissions());
+    }
+  }, [dispatch, auth.user]);
 
   const trialAssessments = useMemo(
-    () => (assessments || []).filter((a) => a.is_trial),
+    () => assessments || [],
     [assessments]
   );
 
@@ -92,6 +94,13 @@ export default function PracticeTest() {
           {assessmentsLoading || submissionsLoading ? (
             <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-sm text-slate-600">
               Loading practice assessments...
+            </div>
+          ) : trialAssessments.length === 0 ? (
+            <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 text-center">
+              <div className="text-slate-500">
+                <p className="text-lg font-semibold mb-2">No Trial Assessments Available</p>
+                <p>Please check back later or contact your recruiter.</p>
+              </div>
             </div>
           ) : (
             trialAssessments.map((a) => (
