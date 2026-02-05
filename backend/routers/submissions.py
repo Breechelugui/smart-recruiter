@@ -12,6 +12,7 @@ from schemas import (
     SubmissionUpdate, AnswerCreate, Answer as AnswerSchema,
     FeedbackCreate, Feedback as FeedbackSchema
 )
+from services.email_service import email_service
 from auth import get_current_active_user, require_role
 
 router = APIRouter(prefix="/api/submissions", tags=["Submissions"])
@@ -351,6 +352,17 @@ def grade_submission(
     db.commit()
     db.refresh(submission)
     
+    # Send grade notification email
+    try:
+        email_service.send_result_notification(
+            submission.interviewee.email,
+            submission.assessment.title,
+            int(total_score),
+            "Graded"
+        )
+    except Exception as e:
+        print(f"Failed to send grade email: {e}")
+    
     return submission
 
 
@@ -406,6 +418,18 @@ def add_feedback(
     
     db.commit()
     db.refresh(feedback)
+    
+    # Send feedback email
+    try:
+        email_service.send_feedback_notification(
+            submission.interviewee.email,
+            submission.interviewee.full_name or submission.interviewee.username,
+            submission.assessment.title,
+            feedback_data.feedback_text,
+            current_user.full_name or current_user.username
+        )
+    except Exception as e:
+        print(f"Failed to send feedback email: {e}")
     
     return feedback
 
