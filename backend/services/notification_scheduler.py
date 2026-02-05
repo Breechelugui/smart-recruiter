@@ -129,7 +129,7 @@ class NotificationScheduler:
             # If no scheduled start time, send reminder based on invitation acceptance
             else:
                 # Send reminder 1 day after acceptance if not started
-                days_since_acceptance = (now - invitation.updated_at).days
+                days_since_acceptance = (now - invitation.responded_at).days if invitation.responded_at else 0
                 if days_since_acceptance == 1:
                     await self._send_reminder_email(
                         candidate=candidate,
