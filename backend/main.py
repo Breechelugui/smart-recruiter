@@ -16,6 +16,14 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Create database tables
+try:
+    # Run migration first
+    from migrate import upgrade
+    upgrade()
+    logger.info("Database migration completed")
+except Exception as e:
+    logger.error(f"Migration failed: {e}")
+
 Base.metadata.create_all(bind=engine)
 
 # Create uploads directory if it doesn't exist
