@@ -73,6 +73,26 @@ class EmailService:
 
         self._send_email(to_email, subject, body)
 
+    def send_feedback_notification(self, to_email: str, candidate_name: str, assessment_title: str, feedback_text: str, recruiter_name: str):
+        """Send notification to candidate when recruiter provides feedback"""
+        subject = f"New Feedback: {assessment_title}"
+        
+        body = f"""
+        Dear {candidate_name},
+
+        You have received new feedback on your assessment: {assessment_title}
+
+        Feedback from {recruiter_name}:
+        {feedback_text}
+
+        Log in to your Smart Recruiter dashboard to view the complete feedback: {self.frontend_url}/login
+
+        Best regards,
+        Smart Recruiter Team
+        """
+
+        self._send_email(to_email, subject, body)
+
     def _send_email(self, to_email: str, subject: str, body: str):
         """Internal method to send email using SendGrid"""
         if not self.sg:
