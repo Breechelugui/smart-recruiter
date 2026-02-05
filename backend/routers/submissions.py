@@ -352,7 +352,6 @@ def grade_submission(
     db.commit()
     db.refresh(submission)
     
-<<<<<<< HEAD
     # Send grade notification email
     try:
         email_service.send_result_notification(
@@ -364,8 +363,6 @@ def grade_submission(
     except Exception as e:
         print(f"Failed to send grade email: {e}")
     
-=======
->>>>>>> origin/main
     return submission
 
 
@@ -422,7 +419,6 @@ def add_feedback(
     db.commit()
     db.refresh(feedback)
     
-<<<<<<< HEAD
     # Send feedback email
     try:
         email_service.send_feedback_notification(
@@ -435,8 +431,6 @@ def add_feedback(
     except Exception as e:
         print(f"Failed to send feedback email: {e}")
     
-=======
->>>>>>> origin/main
     return feedback
 
 
