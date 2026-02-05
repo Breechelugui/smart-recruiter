@@ -7,6 +7,11 @@ import { useAppDispatch } from "../app/hooks";
 import useAuth from "../hooks/useAuth";
 import { loadMe } from "../features/auth/authSlice";
 
+/* Public Pages */
+import About from "../components/pages/About";
+import Contact from "../components/pages/Contact";
+import Terms from "../components/pages/Terms";
+import Privacy from "../components/pages/Privacy";
 
 /* Recruiter pages */
 import RecruiterDashboard from "../features/recruiter/pages/Dashboard";
@@ -52,6 +57,11 @@ export default function AppRoutes() {
       />
       <Route path="/login" element={<Login />} />
       
+      {/* Public Pages */}
+      <Route path="/about" element={<About />} />
+      <Route path="/contact" element={<Contact />} />
+      <Route path="/terms" element={<Terms />} />
+      <Route path="/privacy" element={<Privacy />} />
 
       {/* Legacy candidate routes (redirect) */}
       <Route path="/candidate" element={<Navigate to="/interviewee" replace />} />
