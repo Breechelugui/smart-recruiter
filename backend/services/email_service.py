@@ -1,8 +1,5 @@
 import sendgrid
 from sendgrid.helpers.mail import Mail
-import smtplib
-from email.mime.text import MIMEText
-from email.mime.multipart import MIMEMultipart
 from typing import List
 from config import get_settings
 
@@ -14,10 +11,6 @@ class EmailService:
         self.sendgrid_api_key = settings.sendgrid_api_key
         self.sg = sendgrid.SendGridAPIClient(api_key=self.sendgrid_api_key) if self.sendgrid_api_key else None
         self.frontend_url = settings.frontend_url
-        self.smtp_server = "smtp.gmail.com"
-        self.smtp_port = 587
-        self.sender_email = settings.email_sender or "noreply@smartrecruiter.com"
-        self.sender_password = settings.email_password or ""
 
     def send_invitation_email(self, to_email: str, assessment_title: str, scheduled_start: str = None):
         """Send invitation email to candidate"""
@@ -53,7 +46,6 @@ class EmailService:
         Please ensure you have a stable internet connection and are ready to begin on time.
 
         Log in to your Smart Recruiter dashboard to access the assessment: {self.frontend_url}/login
-        Log in to your Smart Recruiter dashboard to access the assessment.
 
         Best regards,
         Smart Recruiter Team
@@ -94,7 +86,6 @@ class EmailService:
         {feedback_text}
 
         Log in to your Smart Recruiter dashboard to view the complete feedback: {self.frontend_url}/login
-        Log in to your Smart Recruiter dashboard to view detailed feedback and results.
 
         Best regards,
         Smart Recruiter Team
@@ -125,27 +116,6 @@ class EmailService:
         except Exception as e:
             print(f"❌ Failed to send email to {to_email}: {e}")
             print(f"🔧 Check SENDGRID_API_KEY in .env file")
-        """Internal method to send email"""
-        if not self.sender_password:
-            print(f"Email not configured. Would send to {to_email}: {subject}")
-            return
-
-        try:
-            msg = MIMEMultipart()
-            msg['From'] = self.sender_email
-            msg['To'] = to_email
-            msg['Subject'] = subject
-            msg.attach(MIMEText(body, 'plain'))
-
-            server = smtplib.SMTP(self.smtp_server, self.smtp_port)
-            server.starttls()
-            server.login(self.sender_email, self.sender_password)
-            text = msg.as_string()
-            server.sendmail(self.sender_email, to_email, text)
-            server.quit()
-            print(f"Email sent to {to_email}")
-        except Exception as e:
-            print(f"Failed to send email to {to_email}: {e}")
 
 # Singleton instance
 email_service = EmailService()
