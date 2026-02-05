@@ -1,6 +1,6 @@
 import asyncio
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import List, Optional
 from sqlalchemy.orm import Session
 from sqlalchemy import and_
@@ -102,7 +102,7 @@ class NotificationScheduler:
                 return
             
             # Check if we should send a reminder based on assessment timing
-            now = datetime.utcnow()
+            now = datetime.now(timezone.utc)
             
             # Send reminder 24 hours before (if assessment has a scheduled start time)
             if hasattr(assessment, 'scheduled_start_time') and assessment.scheduled_start_time:
