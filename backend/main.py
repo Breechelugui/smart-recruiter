@@ -26,6 +26,14 @@ except Exception as e:
 
 Base.metadata.create_all(bind=engine)
 
+# Seed database with assessments
+try:
+    from seed_katas import seed
+    seed()
+    logger.info("Database seeding completed")
+except Exception as e:
+    logger.error(f"Seeding failed: {e}")
+
 # Create uploads directory if it doesn't exist
 UPLOAD_DIR = "uploads"
 if not os.path.exists(UPLOAD_DIR):
