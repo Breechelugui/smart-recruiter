@@ -1,8 +1,11 @@
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
 from schemas import UserCreate, User
 from database import get_db
 from models import User as UserModel
+from auth import get_current_active_user
+import os
+import uuid
 
 router = APIRouter(prefix="/api/users", tags=["users"])
 
@@ -34,3 +37,42 @@ def ensure_user(payload: UserCreate, db: Session = Depends(get_db)):
     db.commit()
     db.refresh(new_user)
     return {"id": new_user.id, "email": new_user.email, "full_name": new_user.full_name, "role": new_user.role}
+
+@router.post("/upload-profile-picture")
+async def upload_profile_picture(
+    file: UploadFile = File(...),
+    current_user: UserModel = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Upload profile picture for current user"""
+    
+    # Validate file type
+    if not file.content_type.startswith("image/"):
+        raise HTTPException(status_code=400, detail="File must be an image")
+    
+    # Create uploads directory if it doesn't exist
+    upload_dir = "uploads/profile_pictures"
+    os.makedirs(upload_dir, exist_ok=True)
+    
+    # Generate unique filename
+    file_extension = file.filename.split(".")[-1] if file.filename else "jpg"
+    unique_filename = f"{uuid.uuid4()}.{file_extension}"
+    file_path = os.path.join(upload_dir, unique_filename)
+    
+    # Save file
+    try:
+        with open(file_path, "wb") as buffer:
+            content = await file.read()
+            buffer.write(content)
+        
+        # Update user's profile picture in database
+        current_user.profile_picture = f"/uploads/profile_pictures/{unique_filename}"
+        db.commit()
+        db.refresh(current_user)
+        
+        return {
+            "message": "Profile picture uploaded successfully",
+            "profile_picture_url": current_user.profile_picture
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
