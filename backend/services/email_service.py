@@ -93,6 +93,44 @@ class EmailService:
 
         self._send_email(to_email, subject, body)
 
+    def send_invitation_declined_notification(self, to_email: str, candidate_name: str, assessment_title: str):
+        """Send notification to recruiter when candidate declines invitation"""
+        subject = f"Invitation Declined: {assessment_title}"
+        
+        body = f"""
+        Dear Recruiter,
+
+        {candidate_name} has declined the invitation for the assessment: {assessment_title}
+
+        You may want to reach out to the candidate or invite another candidate for this assessment.
+
+        Log in to your Smart Recruiter dashboard to manage invitations: {self.frontend_url}/login
+
+        Best regards,
+        Smart Recruiter Team
+        """
+
+        self._send_email(to_email, subject, body)
+
+    def send_assessment_submitted_notification(self, to_email: str, candidate_name: str, assessment_title: str):
+        """Send notification to recruiter when candidate submits assessment"""
+        subject = f"Assessment Submitted: {assessment_title}"
+        
+        body = f"""
+        Dear Recruiter,
+
+        {candidate_name} has submitted the assessment: {assessment_title}
+
+        The assessment is now ready for grading. Please log in to review and grade the submission.
+
+        Log in to your Smart Recruiter dashboard to grade the assessment: {self.frontend_url}/login
+
+        Best regards,
+        Smart Recruiter Team
+        """
+
+        self._send_email(to_email, subject, body)
+
     def _send_email(self, to_email: str, subject: str, body: str):
         """Internal method to send email using SendGrid"""
         if not self.sg:

@@ -281,4 +281,17 @@ def decline_invitation(
     db.commit()
     db.refresh(invitation)
     
+    # Send email notification to recruiter
+    try:
+        # Get assessment details for email
+        assessment = db.query(Assessment).filter(Assessment.id == invitation.assessment_id).first()
+        if assessment:
+            email_service.send_invitation_declined_notification(
+                assessment.creator.email,
+                current_user.full_name or current_user.username,
+                assessment.title
+            )
+    except Exception as e:
+        print(f"Failed to send decline email: {e}")
+    
     return invitation
