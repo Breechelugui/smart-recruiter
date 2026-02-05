@@ -296,6 +296,16 @@ def submit_assessment(
         db.commit()
         db.refresh(submission)
         
+        # Send email notification to recruiter
+        try:
+            email_service.send_assessment_submitted_notification(
+                submission.assessment.creator.email,
+                submission.interviewee.full_name or submission.interviewee.username,
+                submission.assessment.title
+            )
+        except Exception as e:
+            print(f"Failed to send submission email: {e}")
+        
         return submission
     except Exception as e:
         print("Submit error:", e)
