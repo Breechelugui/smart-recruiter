@@ -1,14 +1,18 @@
-"""Add profile_picture column to users table"""
+"""Add missing columns to users table"""
 
 from sqlalchemy import text
 from database import engine
 
 def upgrade():
     with engine.connect() as conn:
-        # Add profile_picture column if it doesn't exist
+        # Add missing columns if they don't exist
         conn.execute(text("""
             ALTER TABLE users 
-            ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(255);
+            ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(255),
+            ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'interviewee',
+            ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true,
+            ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
         """))
         conn.commit()
 
