@@ -1,9 +1,9 @@
 from fastapi import APIRouter, Depends, HTTPException, File, UploadFile
 from sqlalchemy.orm import Session
-from schemas import UserCreate, User
+from schemas import UserCreate, User, PasswordChange
 from database import get_db
 from models import User as UserModel
-from auth import get_current_active_user
+from auth import get_current_active_user, verify_password, get_password_hash
 import os
 import uuid
 from pydantic import BaseModel
@@ -130,3 +130,21 @@ async def upload_profile_picture(
         }
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to upload file: {str(e)}")
+
+@router.post("/change-password")
+def change_password(
+    password_data: PasswordChange,
+    current_user: UserModel = Depends(get_current_active_user),
+    db: Session = Depends(get_db)
+):
+    """Change current user's password"""
+    if not verify_password(password_data.current_password, current_user.hashed_password):
+        raise HTTPException(status_code=400, detail="Current password is incorrect")
+    
+    if password_data.new_password != password_data.confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match")
+    
+    current_user.hashed_password = get_password_hash(password_data.new_password)
+    db.commit()
+    
+    return {"message": "Password changed successfully"}
