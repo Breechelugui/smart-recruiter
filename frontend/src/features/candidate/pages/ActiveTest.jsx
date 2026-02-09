@@ -127,14 +127,14 @@ export default function ActiveTest() {
     return multipleChoiceAnswers[currentQuestion?.id] || [];
   };
 
-  const handlePrev = () => {
-    if (currentQuestion?.question_type === 'coding') {
+  const handlePrevious = () => {
+    if (currentQuestion?.question_type === 'CODING') {
       // Handle coding question navigation with steps
       if (currentStep > 0) {
         setCurrentStep(currentStep - 1);
       } else if (currentQuestionIndex > 0) {
         setCurrentQuestionIndex(currentQuestionIndex - 1);
-        setCurrentStep(2); // Go to code step of previous question
+        setCurrentStep(2); // Go to Code step of previous question
       }
     } else {
       // Handle other question types (simple navigation)
@@ -145,7 +145,7 @@ export default function ActiveTest() {
   };
 
   const handleNext = () => {
-    if (currentQuestion?.question_type === 'coding') {
+    if (currentQuestion?.question_type === 'CODING') {
       // Handle coding question navigation with steps
       if (currentStep < 2) {
         setCurrentStep(currentStep + 1);
@@ -388,35 +388,37 @@ function validateLogin(credentials) {
             </div>
           </div>
 
-          {/* Whiteboard Steps Progress */}
-          <div className="bg-gray-800 rounded-2xl p-6 border border-gray-700">
-            <h3 className="text-lg font-semibold text-white mb-4">Whiteboard Process</h3>
-            <div className="space-y-2">
-              {whiteboardSteps.map((step, index) => (
-                <div
-                  key={step.id}
-                  className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
-                    index === currentStep ? 'bg-purple-600/20 border border-purple-500' : 'bg-gray-700 hover:bg-gray-600'
-                  }`}
-                  onClick={() => setCurrentStep(index)}
-                >
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
-                    index < currentStep 
-                      ? 'bg-green-600 text-white' 
-                      : index === currentStep 
-                      ? 'bg-purple-600 text-white' 
-                      : 'bg-gray-600 text-gray-300'
-                  }`}>
-                    {index < currentStep ? '✓' : index + 1}
+          {/* Whiteboard Steps Progress - Only for CODING questions */}
+          {currentQuestion?.question_type === 'CODING' && (
+            <div className="bg-gray-800 rounded-2xl p-6 border border-gray-700">
+              <h3 className="text-lg font-semibold text-white mb-4">Whiteboard Process</h3>
+              <div className="space-y-2">
+                {whiteboardSteps.map((step, index) => (
+                  <div
+                    key={step.id}
+                    className={`flex items-center gap-3 p-2 rounded-lg cursor-pointer transition-colors ${
+                      index === currentStep ? 'bg-purple-600/20 border border-purple-500' : 'bg-gray-700 hover:bg-gray-600'
+                    }`}
+                    onClick={() => setCurrentStep(index)}
+                  >
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold ${
+                      index < currentStep 
+                        ? 'bg-green-600 text-white' 
+                        : index === currentStep 
+                        ? 'bg-purple-600 text-white' 
+                        : 'bg-gray-600 text-gray-300'
+                    }`}>
+                      {index < currentStep ? '✓' : index + 1}
+                    </div>
+                    <div>
+                      <div className="text-white font-medium">{step.title}</div>
+                      <div className="text-gray-400 text-sm">{step.description}</div>
+                    </div>
                   </div>
-                  <div>
-                    <div className="text-white font-medium">{step.title}</div>
-                    <div className="text-gray-400 text-sm">{step.description}</div>
-                  </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Question */}
@@ -437,7 +439,7 @@ function validateLogin(credentials) {
 
         {/* Question Answer Area */}
         <div className="bg-gray-800 rounded-2xl border border-gray-700 shadow-xl">
-          {currentQuestion?.question_type === 'multiple_choice' ? (
+          {currentQuestion?.question_type === 'MULTIPLE_CHOICE' ? (
             /* Multiple Choice Question */
             <div className="p-6">
               <h3 className="text-lg font-semibold text-white mb-6">Select Your Answer{currentQuestion?.allow_multiple_answers ? 's' : ''}</h3>
@@ -468,7 +470,7 @@ function validateLogin(credentials) {
                 </div>
               )}
             </div>
-          ) : currentQuestion?.question_type === 'subjective' ? (
+          ) : currentQuestion?.question_type === 'SUBJECTIVE' ? (
             /* Subjective Question */
             <div className="p-6">
               <h3 className="text-lg font-semibold text-white mb-6">Your Answer</h3>
@@ -479,7 +481,7 @@ function validateLogin(credentials) {
                 className="w-full h-64 px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
               />
             </div>
-          ) : currentQuestion?.question_type === 'coding' ? (
+          ) : currentQuestion?.question_type === 'CODING' ? (
             /* Coding Question with Whiteboard Steps */
             <div>
               <div className="p-6 border-b border-gray-700">
