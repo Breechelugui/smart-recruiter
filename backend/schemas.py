@@ -63,6 +63,7 @@ class QuestionBase(BaseModel):
     order: int = 0
     options: Optional[List[str]] = None
     correct_answer: Optional[str] = None
+    allow_multiple_answers: bool = False
     codewars_kata_id: Optional[str] = None
     test_cases: Optional[dict] = None
     starter_code: Optional[str] = None

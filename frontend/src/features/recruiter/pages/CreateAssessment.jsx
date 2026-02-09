@@ -26,6 +26,7 @@ export default function CreateAssessment() {
       question_type: "multiple_choice",
       points: 10,
       options: ["", "", "", ""],
+      allow_multiple_answers: false,
     },
   ]);
 
@@ -79,6 +80,7 @@ export default function CreateAssessment() {
         question_type: "multiple_choice",
         points: 10,
         options: ["", "", "", ""],
+        allow_multiple_answers: false,
       },
     ]);
   };
@@ -97,6 +99,7 @@ export default function CreateAssessment() {
         question_type: q.question_type,
         points: q.points,
         time_limit: q.time_limit || 30,
+        allow_multiple_answers: q.allow_multiple_answers || false,
         ...(q.question_type === "multiple_choice" && { options: q.options }),
         ...(q.codewars_kata_id && { codewars_kata_id: q.codewars_kata_id }),
         ...(q.languages && { languages: q.languages }),
@@ -252,6 +255,15 @@ export default function CreateAssessment() {
                   </div>
                   {q.question_type === "multiple_choice" && (
                     <div className="space-y-2">
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          checked={q.allow_multiple_answers || false}
+                          onChange={(e) => handleQuestionChange(idx, "allow_multiple_answers", e.target.checked)}
+                          className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                        />
+                        <label className="text-sm text-gray-700">Allow multiple answers</label>
+                      </div>
                       {["A", "B", "C", "D"].map((label, oIdx) => (
                         <input
                           key={label}

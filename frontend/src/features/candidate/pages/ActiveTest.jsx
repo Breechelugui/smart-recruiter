@@ -22,6 +22,9 @@ export default function ActiveTest() {
   const [currentStep, setCurrentStep] = useState(0); // Whiteboard step (0: BDD, 1: Pseudocode, 2: Code)
   const [consoleOutput, setConsoleOutput] = useState([]);
   const intervalRef = useRef(null);
+  
+  // For multiple choice questions
+  const [multipleChoiceAnswers, setMultipleChoiceAnswers] = useState({});
 
   const assessment = submission?.assessment;
   const questions = assessment?.questions || [];
@@ -80,25 +83,81 @@ export default function ActiveTest() {
   };
 
   const handleAnswerChange = (value) => {
-    const answerKey = getAnswerKey();
-    setAnswers((prev) => ({ ...prev, [answerKey]: value }));
+    if (currentQuestion?.question_type === 'coding') {
+      // Handle coding question answers with steps
+      const answerKey = getAnswerKey();
+      setAnswers((prev) => ({ ...prev, [answerKey]: value }));
+    } else {
+      // Handle subjective questions
+      setAnswers((prev) => ({ ...prev, [currentQuestion?.id]: value }));
+    }
+  };
+
+  // Handle multiple choice answers
+  const handleMultipleChoiceAnswerChange = (questionId, optionValue, isMultiple = false) => {
+    if (isMultiple) {
+      // For multiple answer questions
+      setMultipleChoiceAnswers((prev) => {
+        const currentAnswers = prev[questionId] || [];
+        if (currentAnswers.includes(optionValue)) {
+          // Remove option if already selected
+          return {
+            ...prev,
+            [questionId]: currentAnswers.filter(ans => ans !== optionValue)
+          };
+        } else {
+          // Add option if not selected
+          return {
+            ...prev,
+            [questionId]: [...currentAnswers, optionValue]
+          };
+        }
+      });
+    } else {
+      // For single answer questions
+      setMultipleChoiceAnswers((prev) => ({
+        ...prev,
+        [questionId]: [optionValue]
+      }));
+    }
+  };
+
+  // Get current multiple choice answer(s)
+  const getCurrentMultipleChoiceAnswer = () => {
+    return multipleChoiceAnswers[currentQuestion?.id] || [];
   };
 
   const handlePrev = () => {
-    if (currentStep > 0) {
-      setCurrentStep(currentStep - 1);
-    } else if (currentQuestionIndex > 0) {
-      setCurrentQuestionIndex(currentQuestionIndex - 1);
-      setCurrentStep(2); // Go to code step of previous question
+    if (currentQuestion?.question_type === 'coding') {
+      // Handle coding question navigation with steps
+      if (currentStep > 0) {
+        setCurrentStep(currentStep - 1);
+      } else if (currentQuestionIndex > 0) {
+        setCurrentQuestionIndex(currentQuestionIndex - 1);
+        setCurrentStep(2); // Go to code step of previous question
+      }
+    } else {
+      // Handle other question types (simple navigation)
+      if (currentQuestionIndex > 0) {
+        setCurrentQuestionIndex(currentQuestionIndex - 1);
+      }
     }
   };
 
   const handleNext = () => {
-    if (currentStep < 2) {
-      setCurrentStep(currentStep + 1);
-    } else if (currentQuestionIndex < questions.length - 1) {
-      setCurrentQuestionIndex(currentQuestionIndex + 1);
-      setCurrentStep(0); // Go to BDD step of next question
+    if (currentQuestion?.question_type === 'coding') {
+      // Handle coding question navigation with steps
+      if (currentStep < 2) {
+        setCurrentStep(currentStep + 1);
+      } else if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+        setCurrentStep(0); // Go to BDD step of next question
+      }
+    } else {
+      // Handle other question types (simple navigation)
+      if (currentQuestionIndex < questions.length - 1) {
+        setCurrentQuestionIndex(currentQuestionIndex + 1);
+      }
     }
   };
 
@@ -112,7 +171,24 @@ export default function ActiveTest() {
 
     // Only save answers if submission is still in progress
     if (submission.status === 'in_progress') {
-      // Save each answer individually using the proper API
+      // Save multiple choice answers
+      for (const [questionId, selectedOptions] of Object.entries(multipleChoiceAnswers)) {
+        if (selectedOptions && selectedOptions.length > 0) {
+          const answerData = {
+            submission_id: parseInt(submissionId),
+            question_id: parseInt(questionId),
+            answer_text: JSON.stringify(selectedOptions), // Store array of selected options
+          };
+
+          try {
+            await dispatch(saveAnswer(answerData)).unwrap();
+          } catch (error) {
+            console.error("Failed to save multiple choice answer:", error);
+          }
+        }
+      }
+
+      // Save coding question answers (structured approach)
       for (const [answerKey, answerValue] of Object.entries(answers)) {
         if (answerValue && answerValue.trim()) {
           const [questionId, stepId] = answerKey.split('_');
@@ -140,6 +216,23 @@ export default function ActiveTest() {
             await dispatch(saveAnswer(answerData)).unwrap();
           } catch (error) {
             console.error("Failed to save answer:", error);
+          }
+        }
+      }
+
+      // Save subjective answers
+      for (const [questionId, answerValue] of Object.entries(answers)) {
+        if (answerValue && answerValue.trim() && !answerKey.includes('_')) {
+          const answerData = {
+            submission_id: parseInt(submissionId),
+            question_id: parseInt(questionId),
+            answer_text: answerValue,
+          };
+
+          try {
+            await dispatch(saveAnswer(answerData)).unwrap();
+          } catch (error) {
+            console.error("Failed to save subjective answer:", error);
           }
         }
       }
@@ -342,99 +435,182 @@ function validateLogin(credentials) {
           )}
         </div>
 
-        {/* Whiteboard Editor */}
+        {/* Question Answer Area */}
         <div className="bg-gray-800 rounded-2xl border border-gray-700 shadow-xl">
-          <div className="p-6 border-b border-gray-700">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">
-                {whiteboardSteps[currentStep].title}
-              </h3>
-              <span className="text-sm text-gray-400">
-                {whiteboardSteps[currentStep].description}
-              </span>
-            </div>
-          </div>
-
-          <div className="p-6">
-            {currentStep === 0 || currentStep === 1 ? (
-              // BDD and Pseudocode - Textarea
-              <textarea
-                value={getCurrentAnswer()}
-                onChange={(e) => handleAnswerChange(e.target.value)}
-                placeholder={getPlaceholder()}
-                className="w-full h-96 px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none font-mono text-sm"
-              />
-            ) : (
-              // Code - Monaco Editor
-              <div className="border border-gray-600 rounded-xl overflow-hidden">
-                {/* Language Selector */}
-                <div className="bg-gray-700 px-4 py-2 border-b border-gray-600 flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-300">Language:</label>
-                  <select
-                    value={selectedLanguage}
-                    onChange={(e) => setSelectedLanguage(e.target.value)}
-                    className="bg-gray-600 text-white text-sm px-3 py-1 rounded border border-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="javascript">JavaScript</option>
-                    <option value="python">Python</option>
-                    <option value="java">Java</option>
-                    <option value="cpp">C++</option>
-                    <option value="csharp">C#</option>
-                    <option value="typescript">TypeScript</option>
-                    <option value="php">PHP</option>
-                    <option value="ruby">Ruby</option>
-                    <option value="go">Go</option>
-                    <option value="rust">Rust</option>
-                  </select>
-                </div>
-                <Editor
-                  height="400px"
-                  language={selectedLanguage}
-                  value={getCurrentAnswer()}
-                  onChange={(value) => handleAnswerChange(value || "")}
-                  theme="vs-dark"
-                  placeholder={getPlaceholder()}
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 14,
-                    lineNumbers: "on",
-                    scrollBeyondLastLine: false,
-                    wordWrap: "on",
-                    automaticLayout: true,
-                  }}
-                />
+          {currentQuestion?.question_type === 'multiple_choice' ? (
+            /* Multiple Choice Question */
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-white mb-6">Select Your Answer{currentQuestion?.allow_multiple_answers ? 's' : ''}</h3>
+              <div className="space-y-3">
+                {(currentQuestion?.options || []).map((option, index) => {
+                  const currentAnswers = getCurrentMultipleChoiceAnswer();
+                  const isSelected = currentAnswers.includes(option);
+                  
+                  return (
+                    <label key={index} className="flex items-center gap-3 p-4 bg-gray-700 rounded-lg cursor-pointer hover:bg-gray-600 transition-colors">
+                      <input
+                        type={currentQuestion?.allow_multiple_answers ? "checkbox" : "radio"}
+                        name={`question-${currentQuestion?.id}`}
+                        value={option}
+                        checked={isSelected}
+                        onChange={(e) => handleMultipleChoiceAnswerChange(currentQuestion?.id, option, currentQuestion?.allow_multiple_answers)}
+                        className="w-5 h-5 text-purple-600 border-gray-500 rounded focus:ring-purple-500 focus:ring-2"
+                      />
+                      <span className="text-white text-sm">{option}</span>
+                    </label>
+                  );
+                })}
               </div>
-            )}
+              
+              {currentQuestion?.allow_multiple_answers && (
+                <div className="mt-4 p-3 bg-blue-900/30 border border-blue-500/30 rounded-lg">
+                  <p className="text-blue-300 text-sm">💡 This question allows multiple answers. Select all that apply.</p>
+                </div>
+              )}
+            </div>
+          ) : currentQuestion?.question_type === 'subjective' ? (
+            /* Subjective Question */
+            <div className="p-6">
+              <h3 className="text-lg font-semibold text-white mb-6">Your Answer</h3>
+              <textarea
+                value={answers[currentQuestion?.id] || ''}
+                onChange={(e) => handleAnswerChange(e.target.value)}
+                placeholder="Type your detailed answer here..."
+                className="w-full h-64 px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
+              />
+            </div>
+          ) : currentQuestion?.question_type === 'coding' ? (
+            /* Coding Question with Whiteboard Steps */
+            <div>
+              <div className="p-6 border-b border-gray-700">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-white">
+                    {whiteboardSteps[currentStep].title}
+                  </h3>
+                  <span className="text-sm text-gray-400">
+                    {whiteboardSteps[currentStep].description}
+                  </span>
+                </div>
+              </div>
 
-            {/* Navigation */}
-            <div className="flex justify-between mt-6">
+              <div className="p-6">
+                {currentStep === 0 || currentStep === 1 ? (
+                  // BDD and Pseudocode - Textarea
+                  <textarea
+                    value={getCurrentAnswer()}
+                    onChange={(e) => handleAnswerChange(e.target.value)}
+                    placeholder={getPlaceholder()}
+                    className="w-full h-96 px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none font-mono text-sm"
+                  />
+                ) : (
+                  // Code - Monaco Editor
+                  <div className="border border-gray-600 rounded-xl overflow-hidden">
+                    {/* Language Selector */}
+                    <div className="bg-gray-700 px-4 py-2 border-b border-gray-600 flex items-center justify-between">
+                      <label className="text-sm font-medium text-gray-300">Language:</label>
+                      <select
+                        value={selectedLanguage}
+                        onChange={(e) => setSelectedLanguage(e.target.value)}
+                        className="bg-gray-600 text-white text-sm px-3 py-1 rounded border border-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="javascript">JavaScript</option>
+                        <option value="python">Python</option>
+                        <option value="java">Java</option>
+                        <option value="cpp">C++</option>
+                        <option value="csharp">C#</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="php">PHP</option>
+                        <option value="ruby">Ruby</option>
+                        <option value="go">Go</option>
+                        <option value="rust">Rust</option>
+                      </select>
+                    </div>
+                    <Editor
+                      height="400px"
+                      language={selectedLanguage}
+                      value={getCurrentAnswer()}
+                      onChange={(value) => handleAnswerChange(value || "")}
+                      theme="vs-dark"
+                      placeholder={getPlaceholder()}
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 14,
+                        lineNumbers: "on",
+                        scrollBeyondLastLine: false,
+                        wordWrap: "on",
+                        automaticLayout: true,
+                      }}
+                    />
+                  </div>
+                )}
+
+                {/* Whiteboard Navigation */}
+                <div className="flex justify-between mt-6">
+                  <button
+                    onClick={handlePrev}
+                    disabled={currentQuestionIndex === 0 && currentStep === 0}
+                    className="px-6 py-3 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200"
+                  >
+                    Previous
+                  </button>
+
+                  <div className="flex gap-2">
+                    {currentStep < 2 ? (
+                      <button
+                        onClick={handleNext}
+                        className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all duration-200"
+                      >
+                        Next Step
+                      </button>
+                    ) : (
+                      <button
+                        onClick={handleSubmit}
+                        className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl transition-all duration-200"
+                      >
+                        {currentQuestionIndex === questions.length - 1 ? 'Submit Assessment' : 'Next Question'}
+                      </button>
+                    )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : (
+            /* Default/Fallback */
+            <div className="p-6">
+              <p className="text-gray-400">Question type not supported</p>
+            </div>
+          )}
+
+          {/* Navigation for non-coding questions */}
+          {currentQuestion?.question_type !== 'coding' && (
+            <div className="flex justify-between p-6 border-t border-gray-700">
               <button
                 onClick={handlePrev}
-                disabled={currentQuestionIndex === 0 && currentStep === 0}
+                disabled={currentQuestionIndex === 0}
                 className="px-6 py-3 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200"
               >
-                Previous
+                Previous Question
               </button>
 
               <div className="flex gap-2">
-                {currentStep < 2 ? (
+                {currentQuestionIndex < questions.length - 1 ? (
                   <button
                     onClick={handleNext}
                     className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all duration-200"
                   >
-                    Next Step
+                    Next Question
                   </button>
                 ) : (
                   <button
                     onClick={handleSubmit}
                     className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl transition-all duration-200"
                   >
-                    {currentQuestionIndex === questions.length - 1 ? 'Submit Assessment' : 'Next Question'}
+                    Submit Assessment
                   </button>
                 )}
               </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Tips */}
