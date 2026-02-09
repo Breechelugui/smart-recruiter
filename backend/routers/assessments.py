@@ -320,3 +320,38 @@ def get_assessment_statistics(
         average_time_taken=sum(times) / len(times) if times else 0.0,
         question_statistics=[]  # Can be expanded with per-question stats
     )
+
+
+@router.delete("/{assessment_id}", status_code=status.HTTP_204_NO_CONTENT)
+def delete_assessment(
+    assessment_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_role(UserRole.RECRUITER))
+):
+    """Delete an assessment (Recruiter only - only creator can delete)"""
+    assessment = db.query(Assessment).filter(Assessment.id == assessment_id).first()
+    
+    if not assessment:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Assessment not found"
+        )
+    
+    if assessment.creator_id != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Not authorized to delete this assessment. Only the creator can delete assessments."
+        )
+    
+    # Check if assessment has any submissions
+    if assessment.submissions:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Cannot delete assessment with existing submissions. Please delete submissions first or archive the assessment."
+        )
+    
+    # Delete the assessment (this will cascade delete questions and invitations)
+    db.delete(assessment)
+    db.commit()
+    
+    return None

@@ -10,6 +10,36 @@ export default function RecruiterAssessments() {
   const navigate = useNavigate();
   const { items: assessments, loading } = useAppSelector((s) => s.assessments);
 
+  const deleteAssessment = async (assessmentId) => {
+    try {
+      const response = await fetch(`http://127.0.0.1:8000/api/assessments/${assessmentId}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+          'Content-Type': 'application/json'
+        }
+      });
+
+      if (response.status === 204) {
+        // Successfully deleted
+        dispatch(fetchAssessments()); // Refresh the list
+        alert('Assessment deleted successfully');
+      } else if (response.status === 400) {
+        const error = await response.json();
+        alert(`Cannot delete assessment: ${error.detail}`);
+      } else if (response.status === 403) {
+        alert('You are not authorized to delete this assessment');
+      } else if (response.status === 404) {
+        alert('Assessment not found');
+      } else {
+        alert('Failed to delete assessment');
+      }
+    } catch (error) {
+      console.error('Error deleting assessment:', error);
+      alert('Failed to delete assessment. Please try again.');
+    }
+  };
+
   useEffect(() => {
     dispatch(fetchAssessments());
   }, [dispatch]);
@@ -102,6 +132,17 @@ export default function RecruiterAssessments() {
                         Results
                       </Button>
                     )}
+
+                    <Button 
+                      variant="danger"
+                      onClick={() => {
+                        if (window.confirm(`Are you sure you want to delete "${assessment.title}"? This action cannot be undone.`)) {
+                          deleteAssessment(assessment.id);
+                        }
+                      }}
+                    >
+                      Delete
+                    </Button>
                   </td>
                 </tr>
               ))}
