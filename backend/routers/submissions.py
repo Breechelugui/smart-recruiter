@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from sqlalchemy.orm import Session
 from typing import List
 from datetime import datetime, timezone
+import json
 from database import get_db
 from models import (
     User, Submission, Assessment, Answer, Question, Feedback,
@@ -33,17 +34,26 @@ def start_submission(
             detail="Assessment not found"
         )
     
-    # Check if submission already exists
-    existing = db.query(Submission).filter(
-        Submission.assessment_id == submission_data.assessment_id,
-        Submission.interviewee_id == current_user.id
-    ).first()
-    
-    if existing:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Submission already exists for this assessment"
-        )
+    # Check if submission already exists (only for non-trial assessments and non-multiple-choice questions)
+    if not assessment.is_trial:
+        # Check if assessment has any non-multiple-choice questions
+        has_non_mcq = any(q.question_type != QuestionType.MULTIPLE_CHOICE for q in assessment.questions)
+        
+        if has_non_mcq:
+            # For assessments with coding/subjective questions, prevent multiple submissions
+            existing = db.query(Submission).filter(
+                Submission.assessment_id == submission_data.assessment_id,
+                Submission.interviewee_id == current_user.id,
+                Submission.status != SubmissionStatus.NOT_STARTED
+            ).first()
+            
+            if existing:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="You have already started this assessment. Invited assessments with coding or subjective questions can only be taken once."
+                )
+        # If all questions are multiple choice, allow multiple submissions (they're auto-graded)
+        # This applies to both new and existing assessments
     
     # Calculate max score
     max_score = sum(q.points for q in assessment.questions)
@@ -54,7 +64,8 @@ def start_submission(
         interviewee_id=current_user.id,
         status=SubmissionStatus.IN_PROGRESS,
         started_at=datetime.now(timezone.utc),
-        max_score=max_score
+        max_score=max_score,
+        # Note: Practice submissions for trial assessments won't be shown to recruiters
     )
     
     db.add(submission)
@@ -83,9 +94,29 @@ def get_submissions(
     
     if current_user.role == UserRole.RECRUITER:
         # Get submissions for assessments created by this recruiter
-        query = query.join(Assessment).filter(Assessment.creator_id == current_user.id)
+        # Exclude practice submissions from trial assessments AND auto-graded multiple choice submissions
+        query = query.join(Assessment).filter(
+            Assessment.creator_id == current_user.id,
+            Assessment.is_trial == False  # Only show real assessments to recruiters
+        )
+        
+        # Further filter out submissions that are purely auto-graded multiple choice
+        # This applies to both new and existing assessments
+        submission_ids_to_exclude = []
+        all_submissions = query.all()
+        
+        for submission in all_submissions:
+            assessment = submission.assessment
+            all_mcq = all(q.question_type == QuestionType.MULTIPLE_CHOICE for q in assessment.questions)
+            if all_mcq:
+                submission_ids_to_exclude.append(submission.id)
+        
+        if submission_ids_to_exclude:
+            query = query.filter(~Submission.id.in_(submission_ids_to_exclude))
+            
+        print(f"Recruiter view: Excluding {len(submission_ids_to_exclude)} auto-graded MCQ submissions")
     else:
-        # Get submissions for this interviewee
+        # Get submissions for this interviewee (both practice and real)
         query = query.filter(Submission.interviewee_id == current_user.id)
     
     if assessment_id:
@@ -281,13 +312,33 @@ def submit_assessment(
         for answer in submission.answers:
             question = answer.question
             if question.question_type == QuestionType.MULTIPLE_CHOICE:
-                if answer.answer_text == question.correct_answer:
-                    answer.is_correct = True
-                    answer.points_earned = question.points
-                    total_score += question.points
+                # Handle both single and multiple answer questions
+                if question.allow_multiple_answers:
+                    # Multiple answer question - check if all selected options match correct answers
+                    selected_options = json.loads(answer.answer_text) if answer.answer_text else []
+                    correct_answers = json.loads(question.correct_answer) if question.correct_answer else []
+                    
+                    # Check if selected options match correct answers (order doesn't matter)
+                    if set(selected_options) == set(correct_answers):
+                        answer.is_correct = True
+                        answer.points_earned = question.points
+                        total_score += question.points
+                    else:
+                        answer.is_correct = False
+                        answer.points_earned = 0
                 else:
-                    answer.is_correct = False
-                    answer.points_earned = 0
+                    # Single answer question - exact match
+                    if answer.answer_text == question.correct_answer:
+                        answer.is_correct = True
+                        answer.points_earned = question.points
+                        total_score += question.points
+                    else:
+                        answer.is_correct = False
+                        answer.points_earned = 0
+            else:
+                # For non-multiple choice questions, keep existing logic or set to not graded
+                answer.is_correct = False
+                answer.points_earned = 0
         
         submission.score = total_score
         submission.status = SubmissionStatus.SUBMITTED
@@ -296,15 +347,20 @@ def submit_assessment(
         db.commit()
         db.refresh(submission)
         
-        # Send email notification to recruiter
-        try:
-            email_service.send_assessment_submitted_notification(
-                submission.assessment.creator.email,
-                submission.interviewee.full_name or submission.interviewee.username,
-                submission.assessment.title
-            )
-        except Exception as e:
-            print(f"Failed to send submission email: {e}")
+        # Send email notification to recruiter (only for non-trial assessments)
+        if not submission.assessment.is_trial:
+            try:
+                email_service.send_assessment_submitted_notification(
+                    submission.assessment.creator.email,
+                    submission.interviewee.full_name or submission.interviewee.username,
+                    submission.assessment.title,
+                    score=total_score,
+                    max_score=sum(q.points for q in submission.assessment.questions)
+                )
+            except Exception as e:
+                print(f"Failed to send submission email: {e}")
+        else:
+            print(f"Practice submission completed (no email sent): {submission.assessment.title}")
         
         return submission
     except Exception as e:

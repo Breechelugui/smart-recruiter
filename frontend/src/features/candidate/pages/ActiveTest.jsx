@@ -128,7 +128,7 @@ export default function ActiveTest() {
   };
 
   const handlePrevious = () => {
-    if (currentQuestion?.question_type === 'CODING') {
+    if (currentQuestion?.question_type === 'CODING' || currentQuestion?.question_type === 'coding') {
       // Handle coding question navigation with steps
       if (currentStep > 0) {
         setCurrentStep(currentStep - 1);
@@ -145,7 +145,7 @@ export default function ActiveTest() {
   };
 
   const handleNext = () => {
-    if (currentQuestion?.question_type === 'CODING') {
+    if (currentQuestion?.question_type === 'CODING' || currentQuestion?.question_type === 'coding') {
       // Handle coding question navigation with steps
       if (currentStep < 2) {
         setCurrentStep(currentStep + 1);
@@ -389,7 +389,7 @@ function validateLogin(credentials) {
           </div>
 
           {/* Whiteboard Steps Progress - Only for CODING questions */}
-          {currentQuestion?.question_type === 'CODING' && (
+          {(currentQuestion?.question_type === 'CODING' || currentQuestion?.question_type === 'coding') && (
             <div className="bg-gray-800 rounded-2xl p-6 border border-gray-700">
               <h3 className="text-lg font-semibold text-white mb-4">Whiteboard Process</h3>
               <div className="space-y-2">
@@ -445,10 +445,12 @@ function validateLogin(credentials) {
             allow_multiple_answers={currentQuestion?.allow_multiple_answers} | 
             options={currentQuestion?.options ? JSON.stringify(currentQuestion.options).slice(0, 100) : 'null'} |
             hasOptions={currentQuestion?.options && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0} |
-            isMultipleChoice={currentQuestion?.question_type === 'MULTIPLE_CHOICE' || (currentQuestion?.options && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0)}
+            isMultipleChoice={currentQuestion?.question_type === 'MULTIPLE_CHOICE' || currentQuestion?.question_type === 'multiple_choice' || (currentQuestion?.options && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0)} |
+            willShowMultipleChoice={currentQuestion?.question_type === 'MULTIPLE_CHOICE' || currentQuestion?.question_type === 'multiple_choice' || (currentQuestion?.options && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0)}
           </div>
           
           {currentQuestion?.question_type === 'MULTIPLE_CHOICE' || 
+           currentQuestion?.question_type === 'multiple_choice' ||
            (currentQuestion?.options && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) ||
            (currentQuestion?.title && currentQuestion.title.toLowerCase().includes('variable')) ? (
             /* Multiple Choice Question */
@@ -482,6 +484,7 @@ function validateLogin(credentials) {
               )}
             </div>
           ) : (currentQuestion?.question_type === 'SUBJECTIVE' || 
+            currentQuestion?.question_type === 'subjective' ||
             (currentQuestion?.description && !currentQuestion?.options && !currentQuestion?.codewars_kata_id)) ? (
             /* Subjective Question */
             <div className="p-6">
@@ -494,6 +497,7 @@ function validateLogin(credentials) {
               />
             </div>
           ) : (currentQuestion?.question_type === 'CODING' || 
+            currentQuestion?.question_type === 'coding' ||
             currentQuestion?.codewars_kata_id || 
             (!currentQuestion?.options && currentQuestion?.description && !currentQuestion?.title.toLowerCase().includes('variable'))) ? (
             /* Coding Question with Whiteboard Steps */
@@ -563,7 +567,7 @@ function validateLogin(credentials) {
                 {/* Whiteboard Navigation */}
                 <div className="flex justify-between mt-6">
                   <button
-                    onClick={handlePrev}
+                    onClick={handlePrevious}
                     disabled={currentQuestionIndex === 0 && currentStep === 0}
                     className="px-6 py-3 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200"
                   >
@@ -598,10 +602,10 @@ function validateLogin(credentials) {
           )}
 
           {/* Navigation for non-coding questions */}
-          {currentQuestion?.question_type !== 'coding' && (
+          {currentQuestion?.question_type !== 'coding' && currentQuestion?.question_type !== 'CODING' && (
             <div className="flex justify-between p-6 border-t border-gray-700">
               <button
-                onClick={handlePrev}
+                onClick={handlePrevious}
                 disabled={currentQuestionIndex === 0}
                 className="px-6 py-3 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200"
               >

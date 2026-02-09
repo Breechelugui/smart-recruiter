@@ -56,6 +56,35 @@ export default function CreateAssessment() {
     });
   };
 
+  const handleCorrectAnswerChange = (qIdx, oIdx, isChecked) => {
+    setQuestions((prev) => {
+      const updated = [...prev];
+      const question = updated[qIdx];
+      
+      if (question.allow_multiple_answers) {
+        // Multiple answer question - handle array of correct answers
+        let correctAnswers = question.correct_answer ? JSON.parse(question.correct_answer) : [];
+        
+        if (isChecked) {
+          // Add option to correct answers if not already present
+          if (!correctAnswers.includes(question.options[oIdx])) {
+            correctAnswers.push(question.options[oIdx]);
+          }
+        } else {
+          // Remove option from correct answers if present
+          correctAnswers = correctAnswers.filter(ans => ans !== question.options[oIdx]);
+        }
+        
+        updated[qIdx].correct_answer = JSON.stringify(correctAnswers);
+      } else {
+        // Single answer question - handle single correct answer
+        updated[qIdx].correct_answer = isChecked ? question.options[oIdx] : "";
+      }
+      
+      return updated;
+    });
+  };
+
   const handleImportKata = (kataData) => {
     const newQuestion = {
       question_text: kataData.description,
@@ -100,6 +129,7 @@ export default function CreateAssessment() {
         points: q.points,
         time_limit: q.time_limit || 30,
         allow_multiple_answers: q.allow_multiple_answers || false,
+        correct_answer: q.correct_answer || null,
         ...(q.question_type === "multiple_choice" && { options: q.options }),
         ...(q.codewars_kata_id && { codewars_kata_id: q.codewars_kata_id }),
         ...(q.languages && { languages: q.languages }),
@@ -264,16 +294,56 @@ export default function CreateAssessment() {
                         />
                         <label className="text-sm text-gray-700">Allow multiple answers</label>
                       </div>
-                      {["A", "B", "C", "D"].map((label, oIdx) => (
-                        <input
-                          key={label}
-                          value={q.options[oIdx]}
-                          onChange={(e) => handleOptionChange(idx, oIdx, e.target.value)}
-                          placeholder={`Option ${label}`}
-                          className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
-                          required
-                        />
-                      ))}
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">Options</label>
+                        {["A", "B", "C", "D"].map((label, oIdx) => (
+                          <input
+                            key={label}
+                            value={q.options[oIdx]}
+                            onChange={(e) => handleOptionChange(idx, oIdx, e.target.value)}
+                            placeholder={`Option ${label}`}
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm mb-2"
+                            required
+                          />
+                        ))}
+                      </div>
+                      <div className="space-y-2">
+                        <label className="block text-sm font-medium text-gray-700 mb-2">
+                          Correct Answer{q.allow_multiple_answers ? 's' : ''}
+                        </label>
+                        {q.allow_multiple_answers ? (
+                          <div className="space-y-2">
+                            <p className="text-xs text-gray-500 mb-2">Select all correct options (order doesn't matter)</p>
+                            {["A", "B", "C", "D"].map((label, oIdx) => (
+                              <div key={label} className="flex items-center gap-2">
+                                <input
+                                  type="checkbox"
+                                  checked={q.correct_answer && q.correct_answer.includes(q.options[oIdx]) || false}
+                                  onChange={(e) => handleCorrectAnswerChange(idx, oIdx, e.target.checked)}
+                                  className="w-4 h-4 text-purple-600 border-gray-300 rounded focus:ring-purple-500"
+                                />
+                                <label className="text-sm text-gray-700">{q.options[oIdx]}</label>
+                              </div>
+                            ))}
+                          </div>
+                        ) : (
+                          <select
+                            value={q.correct_answer || ""}
+                            onChange={(e) => handleQuestionChange(idx, "correct_answer", e.target.value)}
+                            className="w-full px-3 py-2 border border-slate-200 rounded-lg text-sm"
+                            required
+                          >
+                            <option value="">Select correct answer</option>
+                            {["A", "B", "C", "D"].map((label, oIdx) => (
+                              q.options[oIdx] && (
+                                <option key={label} value={q.options[oIdx]}>
+                                  {label}: {q.options[oIdx]}
+                                </option>
+                              )
+                            ))}
+                          </select>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>

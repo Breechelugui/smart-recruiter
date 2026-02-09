@@ -112,18 +112,38 @@ class EmailService:
 
         self._send_email(to_email, subject, body)
 
-    def send_assessment_submitted_notification(self, to_email: str, candidate_name: str, assessment_title: str):
+    def send_assessment_submitted_notification(self, to_email: str, candidate_name: str, assessment_title: str, score: float = None, max_score: float = None):
         """Send notification to recruiter when candidate submits assessment"""
         subject = f"Assessment Submitted: {assessment_title}"
         
-        body = f"""
+        if score is not None and max_score is not None:
+            score_percentage = (score / max_score) * 100 if max_score > 0 else 0
+            body = f"""
         Dear Recruiter,
 
-        {candidate_name} has submitted the assessment: {assessment_title}
+        {candidate_name} has submitted assessment: {assessment_title}
+
+        📊 **Auto-Grading Results:**
+        Score: {score}/{max_score} ({score_percentage:.1f}%)
+        
+        The assessment has been automatically graded. Multiple choice questions were graded based on the correct answers you specified.
+        No detailed feedback was provided as per your preference.
+
+        Log in to your Smart Recruiter dashboard to review results: {self.frontend_url}/login
+
+        Best regards,
+        Smart Recruiter Team
+        """
+        else:
+            body = f"""
+        Dear Recruiter,
+
+        {candidate_name} has submitted assessment: {assessment_title}
 
         The assessment is now ready for grading. Please log in to review and grade the submission.
+        Note: Multiple choice questions can be auto-graded if correct answers are specified.
 
-        Log in to your Smart Recruiter dashboard to grade the assessment: {self.frontend_url}/login
+        Log in to your Smart Recruiter dashboard to grade assessment: {self.frontend_url}/login
 
         Best regards,
         Smart Recruiter Team
