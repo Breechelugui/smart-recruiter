@@ -439,17 +439,18 @@ function validateLogin(credentials) {
 
         {/* Question Answer Area */}
         <div className="bg-gray-800 rounded-2xl border border-gray-700 shadow-xl">
-          {/* Debug Info - Remove after fixing */}
-          {process.env.NODE_ENV === 'development' && (
-            <div className="p-2 bg-yellow-900/50 text-yellow-300 text-xs mb-2 rounded">
-              Debug: question_type="{currentQuestion?.question_type}" | 
-              allow_multiple_answers={currentQuestion?.allow_multiple_answers} | 
-              options={currentQuestion?.options ? JSON.stringify(currentQuestion.options).slice(0, 100) : 'null'}
-            </div>
-          )}
+          {/* Debug Info - Always show until fixed */}
+          <div className="p-2 bg-yellow-900/50 text-yellow-300 text-xs mb-2 rounded">
+            Debug: question_type="{currentQuestion?.question_type}" | 
+            allow_multiple_answers={currentQuestion?.allow_multiple_answers} | 
+            options={currentQuestion?.options ? JSON.stringify(currentQuestion.options).slice(0, 100) : 'null'} |
+            hasOptions={currentQuestion?.options && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0} |
+            isMultipleChoice={currentQuestion?.question_type === 'MULTIPLE_CHOICE' || (currentQuestion?.options && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0)}
+          </div>
           
           {currentQuestion?.question_type === 'MULTIPLE_CHOICE' || 
-           (currentQuestion?.options && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) ? (
+           (currentQuestion?.options && Array.isArray(currentQuestion.options) && currentQuestion.options.length > 0) ||
+           (currentQuestion?.title && currentQuestion.title.toLowerCase().includes('variable')) ? (
             /* Multiple Choice Question */
             <div className="p-6">
               <h3 className="text-lg font-semibold text-white mb-6">Select Your Answer{currentQuestion?.allow_multiple_answers ? 's' : ''}</h3>
@@ -494,7 +495,7 @@ function validateLogin(credentials) {
             </div>
           ) : (currentQuestion?.question_type === 'CODING' || 
             currentQuestion?.codewars_kata_id || 
-            (!currentQuestion?.options && currentQuestion?.description)) ? (
+            (!currentQuestion?.options && currentQuestion?.description && !currentQuestion?.title.toLowerCase().includes('variable'))) ? (
             /* Coding Question with Whiteboard Steps */
             <div>
               <div className="p-6 border-b border-gray-700">
