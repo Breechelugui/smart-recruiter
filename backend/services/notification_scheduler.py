@@ -213,7 +213,7 @@ class NotificationScheduler:
             </head>
             <body>
                 <div class="header">
-                    <h1>⏰ Assessment Reminder</h1>
+                    <h1> Assessment Reminder</h1>
                     <p>Don't miss your upcoming assessment</p>
                 </div>
                 
@@ -224,9 +224,9 @@ class NotificationScheduler:
                     
                     <div class="urgent">
                         <strong>Assessment Details:</strong><br>
-                        📝 <strong>Title:</strong> {assessment.title}<br>
-                        ⏱️ <strong>Time Limit:</strong> {assessment.time_limit or 'Not specified'} minutes<br>
-                        📋 <strong>Questions:</strong> {len(assessment.questions) if assessment.questions else 'Multiple'} questions
+                        <strong>Title:</strong> {assessment.title}<br>
+                        <strong>Time Limit:</strong> {assessment.time_limit or 'Not specified'} minutes<br>
+                        <strong>Questions:</strong> {len(assessment.questions) if assessment.questions else 'Multiple'} questions
                     </div>
                     
                     <p><strong>What you need to know:</strong></p>

@@ -134,13 +134,13 @@ class EmailService:
     def _send_email(self, to_email: str, subject: str, body: str):
         """Internal method to send email using SendGrid"""
         if not self.sg:
-            print(f"⚠️  SENDGRID NOT CONFIGURED: Missing SENDGRID_API_KEY in .env")
-            print(f"📧 Would send to {to_email}: {subject}")
-            print(f"📝 Body preview: {body[:100]}...")
+            print(f"  SENDGRID NOT CONFIGURED: Missing SENDGRID_API_KEY in .env")
+            print(f" Would send to {to_email}: {subject}")
+            print(f" Body preview: {body[:100]}...")
             return
 
         try:
-            print(f"📧 Sending email via SendGrid to {to_email}...")
+            print(f" Sending email via SendGrid to {to_email}...")
             
             mail = Mail(
                 from_email=self.sender_email,
@@ -150,10 +150,10 @@ class EmailService:
             )
             
             response = self.sg.send(mail)
-            print(f"✅ Email sent successfully to {to_email}. Status: {response.status_code}")
+            print(f" Email sent successfully to {to_email}. Status: {response.status_code}")
         except Exception as e:
-            print(f"❌ Failed to send email to {to_email}: {e}")
-            print(f"🔧 Check SENDGRID_API_KEY in .env file")
+            print(f" Failed to send email to {to_email}: {e}")
+            print(f" Check SENDGRID_API_KEY in .env file")
 
 # Singleton instance
 email_service = EmailService()
