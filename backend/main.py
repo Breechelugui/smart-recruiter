@@ -16,7 +16,23 @@ logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
 # Create database tables
+try:
+    # Run migration first
+    from migrate import upgrade
+    upgrade()
+    logger.info("Database migration completed")
+except Exception as e:
+    logger.error(f"Migration failed: {e}")
+
 Base.metadata.create_all(bind=engine)
+
+# Seed database with assessments
+try:
+    from seed_katas import seed
+    seed()
+    logger.info("Database seeding completed")
+except Exception as e:
+    logger.error(f"Seeding failed: {e}")
 
 # Create uploads directory if it doesn't exist
 UPLOAD_DIR = "uploads"
@@ -32,7 +48,7 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url, "http://localhost:5173", "http://localhost:5174", "http://localhost:3000", "http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://127.0.0.1:3000"],
+    allow_origins=[settings.frontend_url, "http://localhost:5173","https://own-app-ten.vercel.app", "http://localhost:5174", "http://localhost:3000", "http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://127.0.0.1:3000"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],

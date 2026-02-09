@@ -81,7 +81,7 @@ def seed():
 
         kata = codewars_service.get_kata_by_id(kata_id)
         if not kata:
-            print(f"❌ Failed to fetch kata {kata_id}")
+            print(f" Failed to fetch kata {kata_id}")
             continue
 
         exists = db.query(Question).filter(
@@ -89,7 +89,7 @@ def seed():
         ).first()
 
         if exists:
-            print(f"⚠️ {kata['name']} already exists")
+            print(f" {kata['name']} already exists")
             continue
 
         question = Question(
@@ -105,11 +105,11 @@ def seed():
         )
 
         db.add(question)
-        print(f"✅ Added: {kata['name']}")
+        print(f"Added: {kata['name']}")
 
     db.commit()
     db.close()
-    print("🎉 Codewars seeding complete")
+    print("Codewars seeding complete")
 
 if __name__ == "__main__":
     seed()

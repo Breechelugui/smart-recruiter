@@ -1,22 +1,19 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { Provider } from 'react-redux';
 import { BrowserRouter } from 'react-router-dom';
 import { configureStore } from '@reduxjs/toolkit';
-import authReducer from '../features/auth/authSlice';
-import LoginPage from '../features/auth/pages/Login';
-
-// Mock apiClient
-jest.mock('../services/apiClient');
+import authSlice from '../../features/auth/authSlice';
+import LoginPage from '../../features/auth/pages/Login';
 
 const createTestStore = (initialState = {}) => {
   return configureStore({
     reducer: {
-      auth: authReducer,
+      auth: authSlice,
     },
     preloadedState: {
       auth: {
         user: null,
-        role: null,
+        token: null,
         isAuthenticated: false,
         loading: false,
         error: null,
@@ -41,21 +38,37 @@ describe('LoginPage', () => {
   it('renders login form', () => {
     renderWithProviders(<LoginPage />);
     
-    expect(screen.getByPlaceholderText(/username/i)).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: /sign in to portal/i })).toBeInTheDocument();
+    expect(screen.getByLabelText(/username/i)).toBeInTheDocument();
+    expect(screen.getByLabelText(/password/i)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /login/i })).toBeInTheDocument();
   });
 
-  it('submits form with valid credentials', () => {
+  it('shows validation errors for empty fields', async () => {
+    renderWithProviders(<LoginPage />);
+    
+    const loginButton = screen.getByRole('button', { name: /login/i });
+    fireEvent.click(loginButton);
+    
+    await waitFor(() => {
+      expect(screen.getByText(/username is required/i)).toBeInTheDocument();
+      expect(screen.getByText(/password is required/i)).toBeInTheDocument();
+    });
+  });
+
+  it('submits form with valid credentials', async () => {
     const mockStore = createTestStore();
     renderWithProviders(<LoginPage />, { store: mockStore });
     
-    const usernameInput = screen.getByPlaceholderText(/username/i);
-    const passwordInput = screen.getByPlaceholderText(/••••••••/);
+    const usernameInput = screen.getByLabelText(/username/i);
+    const passwordInput = screen.getByLabelText(/password/i);
+    const loginButton = screen.getByRole('button', { name: /login/i });
     
     fireEvent.change(usernameInput, { target: { value: 'testuser' } });
     fireEvent.change(passwordInput, { target: { value: 'testpass' } });
+    fireEvent.click(loginButton);
     
-    expect(usernameInput.value).toBe('testuser');
-    expect(passwordInput.value).toBe('testpass');
+    await waitFor(() => {
+      expect(mockStore.getState().auth.loading).toBe(true);
+    });
   });
 });
