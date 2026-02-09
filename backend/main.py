@@ -17,7 +17,14 @@ logger = logging.getLogger(__name__)
 
 # Create database tables
 try:
-    # Run migration first
+    # Ensure database schema is up to date first
+    from startup_fix import ensure_database_schema
+    if ensure_database_schema():
+        logger.info("Database schema verified")
+    else:
+        logger.warning("Database schema verification failed, continuing...")
+    
+    # Run regular migration
     from migrate import upgrade
     upgrade()
     logger.info("Database migration completed")
@@ -33,6 +40,23 @@ try:
     logger.info("Database seeding completed")
 except Exception as e:
     logger.error(f"Seeding failed: {e}")
+    
+    # If seeding fails due to missing column, try to fix it
+    if "allow_multiple_answers" in str(e):
+        logger.info("Attempting to fix missing database column...")
+        try:
+            from fix_production_db import fix_production_database
+            if fix_production_database():
+                logger.info("Database fixed, retrying seeding...")
+                from seed_katas import seed
+                seed()
+                logger.info("Database seeding completed after fix")
+            else:
+                logger.error("Failed to fix database")
+        except Exception as fix_error:
+            logger.error(f"Database fix failed: {fix_error}")
+    else:
+        logger.error(f"Seeding failed with different error: {e}")
 
 # Create uploads directory if it doesn't exist
 UPLOAD_DIR = "uploads"

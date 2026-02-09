@@ -92,7 +92,7 @@ class Question(Base):
     # For multiple choice questions
     options = Column(JSON)  # List of options
     correct_answer = Column(String)  # For multiple choice (JSON string for multiple answers)
-    allow_multiple_answers = Column(Boolean, default=False)  # Whether multiple selections are allowed
+    allow_multiple_answers = Column(Boolean, default=False, server_default='false')  # Whether multiple selections are allowed
     
     # For coding questions
     codewars_kata_id = Column(String)  # If fetched from Codewars

@@ -101,7 +101,8 @@ def seed():
             order=index,
             codewars_kata_id=kata["id"],
             starter_code=None,
-            test_cases=None
+            test_cases=None,
+            allow_multiple_answers=False  # Explicitly set for coding questions
         )
 
         db.add(question)
