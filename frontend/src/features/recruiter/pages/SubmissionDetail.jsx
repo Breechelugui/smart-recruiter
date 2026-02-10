@@ -5,6 +5,7 @@ import Button from "../../../components/common/Button";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
 import { fetchAssessments } from "../../assessments/assessmentSlice";
 import { fetchSubmissions } from "../../submissions/submissionsSlice";
+import apiClient from "../../../services/apiClient";
 import { detectQuestionType, isCodingQuestion, isMultipleChoiceQuestion, isMultipleAnswerQuestion } from "../../../utils/questionTypes";
 import BackToDashboardButton from "../../../components/common/BackToDashboardButton";
 import { Editor } from "@monaco-editor/react";
@@ -79,24 +80,12 @@ export default function SubmissionDetail() {
       for (const [questionId, score] of Object.entries(scores)) {
         const answer = submission.answers.find(a => a.question_id === parseInt(questionId));
         if (answer) {
-          await fetch(`http://127.0.0.1:8000/api/submissions/answers/${answer.id}/grade?points_earned=${score}`, {
-            method: 'PUT',
-            headers: {
-              'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-              'Content-Type': 'application/json'
-            }
-          });
+          await apiClient.put(`/submissions/answers/${answer.id}/grade?points_earned=${score}`);
         }
       }
       
       // Then grade the overall submission
-      await fetch(`http://127.0.0.1:8000/api/submissions/${submission.id}/grade`, {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-          'Content-Type': 'application/json'
-        }
-      });
+      await apiClient.post(`/submissions/${submission.id}/grade`);
       
       // Refresh the data
       dispatch(fetchSubmissions());
@@ -255,13 +244,7 @@ export default function SubmissionDetail() {
                     if (e.target.value.trim()) {
                       const answer = submission.answers?.find(a => a.question_id === q.id);
                       if (answer) {
-                        fetch(`http://127.0.0.1:8000/api/submissions/${submission.id}/feedback`, {
-                          method: 'POST',
-                          headers: {
-                            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
-                            'Content-Type': 'application/json'
-                          },
-                          body: JSON.stringify({
+                        apiClient.post(`/submissions/${submission.id}/feedback`, {
                             submission_id: submission.id,
                             answer_id: answer.id,
                             feedback_text: e.target.value

@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import React, { useState, useEffect, useCallback } from "react";
+import { useNavigate } from "react-router-dom";
+import apiClient from "../../services/apiClient";
 
 const CountdownTimer = ({ 
   timeLimit, 
@@ -34,26 +35,26 @@ const CountdownTimer = ({
       await onTimeExpire();
     }
     
-    // Fallback auto-submission if callback not provided
+    import apiClient from "../../services/apiClient";
+
+// Fallback auto-submission if callback not provided
     if (submissionId) {
       try {
-        const response = await fetch(`http://127.0.0.1:8000/api/submissions/${submissionId}/submit`, {
-          method: 'POST',
-          headers: {
-            'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+        const response = await apiClient.post(`/submissions/${submissionId}/submit`);
             'Content-Type': 'application/json'
           }
         });
         
-        if (response.ok) {
+        if (response.data) {
           // Show notification and redirect
           alert('Time expired! Your assessment has been automatically submitted.');
           navigate('/interviewee');
         }
       } catch (error) {
-        console.error('Auto-submission failed:', error);
-        alert('Time expired! There was an issue auto-submitting. Please submit manually.');
+        console.error('Auto-submit failed:', error);
       }
+    } else {
+      alert('Time expired! There was an issue auto-submitting. Please submit manually.');
     }
   }, [onTimeExpire, submissionId, navigate]);
 

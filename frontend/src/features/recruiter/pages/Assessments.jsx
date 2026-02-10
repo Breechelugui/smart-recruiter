@@ -4,6 +4,7 @@ import PageWrapper from "../../../components/layout/PageWrapper";
 import Button from "../../../components/common/Button";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
 import { fetchAssessments, deleteAssessment } from "../../assessments/assessmentSlice";
+import apiClient from "../../../services/apiClient";
 import { getQuestionTypeInfo, detectQuestionType } from "../../../utils/questionTypes";
 
 export default function RecruiterAssessments() {
@@ -160,12 +161,7 @@ export default function RecruiterAssessments() {
                       <Button
                         onClick={() => {
                           // Publish assessment
-                          fetch(`http://127.0.0.1:8000/api/assessments/${assessment.id}/publish`, {
-                            method: 'POST',
-                            headers: {
-                              'Authorization': `Bearer ${localStorage.getItem('access_token')}`
-                            }
-                          }).then(() => dispatch(fetchAssessments()));
+                          apiClient.post(`/assessments/${assessment.id}/publish`).then(() => dispatch(fetchAssessments()));
                         }}
                       >
                         Publish

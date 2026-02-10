@@ -41,7 +41,7 @@ export default function ProfileManagement() {
         email: user.email || "",
       });
       // Construct full URL for profile picture
-      const baseURL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+      const baseURL = import.meta.env.VITE_API_URL || "https://smart-recruiter-backend-9uv4.onrender.com";
       const profilePicUrl = user.profile_picture 
         ? (user.profile_picture.startsWith('http') 
             ? user.profile_picture 
@@ -133,7 +133,7 @@ export default function ProfileManagement() {
       showMessage("success", "Profile picture uploaded successfully!");
       
       // Construct full URL for the uploaded picture
-      const baseURL = import.meta.env.VITE_API_URL || "http://127.0.0.1:8000";
+      const baseURL = import.meta.env.VITE_API_URL || "https://smart-recruiter-backend-9uv4.onrender.com";
       const fullProfilePicUrl = response.data.profile_picture.startsWith('http')
         ? response.data.profile_picture
         : `${baseURL}${response.data.profile_picture}`;
