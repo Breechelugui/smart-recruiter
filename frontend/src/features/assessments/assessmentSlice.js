@@ -47,6 +47,20 @@ export const createAssessment = createAsyncThunk(
   }
 );
 
+export const deleteAssessment = createAsyncThunk(
+  "assessments/deleteAssessment",
+  async (assessmentId, { rejectWithValue }) => {
+    try {
+      await apiClient.delete(`/api/assessments/${assessmentId}`);
+      return assessmentId;
+    } catch (err) {
+      const detail = err?.response?.data?.detail;
+      const message = typeof detail === "string" ? detail : JSON.stringify(detail);
+      return rejectWithValue(message);
+    }
+  }
+);
+
 const assessmentSlice = createSlice({
   name: "assessments",
   initialState,
@@ -76,6 +90,18 @@ const assessmentSlice = createSlice({
       .addCase(createAssessment.rejected, (state, action) => {
         state.loading = false;
         state.error = action.payload || "Failed to create assessment";
+      })
+      .addCase(deleteAssessment.pending, (state) => {
+        state.loading = true;
+        state.error = null;
+      })
+      .addCase(deleteAssessment.fulfilled, (state, action) => {
+        state.loading = false;
+        state.items = state.items.filter(assessment => assessment.id !== action.payload);
+      })
+      .addCase(deleteAssessment.rejected, (state, action) => {
+        state.loading = false;
+        state.error = action.payload || "Failed to delete assessment";
       });
   },
 });

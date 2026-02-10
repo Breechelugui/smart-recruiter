@@ -1,18 +1,36 @@
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import PageWrapper from "../../../components/layout/PageWrapper";
 import Button from "../../../components/common/Button";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
-import { fetchAssessments } from "../../assessments/assessmentSlice";
+import { fetchAssessments, deleteAssessment } from "../../assessments/assessmentSlice";
 
 export default function RecruiterAssessments() {
   const dispatch = useAppDispatch();
   const navigate = useNavigate();
   const { items: assessments, loading } = useAppSelector((s) => s.assessments);
+  const [deletingId, setDeletingId] = useState(null);
 
   useEffect(() => {
     dispatch(fetchAssessments());
   }, [dispatch]);
+
+  const handleDeleteAssessment = async (assessmentId, assessmentTitle) => {
+    const confirmed = window.confirm(
+      `Are you sure you want to delete "${assessmentTitle}"? This action cannot be undone and will remove all associated questions, invitations, and submissions.`
+    );
+    
+    if (confirmed) {
+      setDeletingId(assessmentId);
+      try {
+        await dispatch(deleteAssessment(assessmentId)).unwrap();
+      } catch (error) {
+        alert(`Failed to delete assessment: ${error}`);
+      } finally {
+        setDeletingId(null);
+      }
+    }
+  };
 
   return (
     <PageWrapper>
@@ -76,6 +94,15 @@ export default function RecruiterAssessments() {
                       onClick={() => navigate(`/recruiter/results?assessment=${assessment.id}`)}
                     >
                       View
+                    </Button>
+
+                    <Button
+                      variant="danger"
+                      onClick={() => handleDeleteAssessment(assessment.id, assessment.title)}
+                      disabled={deletingId === assessment.id}
+                      className="min-w-[80px]"
+                    >
+                      {deletingId === assessment.id ? 'Deleting...' : 'Delete'}
                     </Button>
 
                     {assessment.status === "draft" && (
