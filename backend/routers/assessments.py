@@ -233,6 +233,7 @@ def delete_assessment(
     try:
         db.delete(assessment)
         db.commit()
+        return {"message": "Assessment deleted successfully"}
     except Exception as e:
         db.rollback()
         print(f"Error deleting assessment {assessment_id}: {str(e)}")
@@ -240,8 +241,6 @@ def delete_assessment(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to delete assessment: {str(e)}"
         )
-    
-    return None
 
 
 @router.post("/{assessment_id}/questions", response_model=QuestionSchema, status_code=status.HTTP_201_CREATED)
