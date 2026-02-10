@@ -37,29 +37,39 @@ except Exception as e:
 # Add new columns for multiple answer questions
 try:
     import psycopg2
-    conn = psycopg2.connect(settings.database_url)
-    cursor = conn.cursor()
+    from psycopg2 import OperationalError
     
-    # Add correct_answers column to questions table
     try:
-        cursor.execute('ALTER TABLE questions ADD COLUMN correct_answers JSONB;')
-        conn.commit()
-        logger.info("Added correct_answers column to questions table")
-    except psycopg2.errors.DuplicateColumn:
-        logger.info("correct_answers column already exists")
-    
-    # Add selected_answers column to answers table
-    try:
-        cursor.execute('ALTER TABLE answers ADD COLUMN selected_answers JSONB;')
-        conn.commit()
-        logger.info("Added selected_answers column to answers table")
-    except psycopg2.errors.DuplicateColumn:
-        logger.info("selected_answers column already exists")
-    
-    conn.close()
-    logger.info("Database schema update completed")
+        conn = psycopg2.connect(settings.database_url)
+        cursor = conn.cursor()
+        
+        # Add correct_answers column to questions table
+        try:
+            cursor.execute('ALTER TABLE questions ADD COLUMN IF NOT EXISTS correct_answers JSONB;')
+            conn.commit()
+            logger.info("Added correct_answers column to questions table")
+        except Exception as e:
+            logger.info(f"correct_answers column issue: {e}")
+        
+        # Add selected_answers column to answers table
+        try:
+            cursor.execute('ALTER TABLE answers ADD COLUMN IF NOT EXISTS selected_answers JSONB;')
+            conn.commit()
+            logger.info("Added selected_answers column to answers table")
+        except Exception as e:
+            logger.info(f"selected_answers column issue: {e}")
+        
+        conn.close()
+        logger.info("Database schema update completed")
+    except OperationalError as e:
+        logger.warning(f"Could not connect to database for schema update: {e}")
+    except Exception as e:
+        logger.error(f"Database schema update failed: {e}")
+        
+except ImportError as e:
+    logger.warning(f"psycopg2 not available for schema update: {e}")
 except Exception as e:
-    logger.error(f"Database schema update failed: {e}")
+    logger.error(f"Unexpected error during schema update: {e}")
 
 # Create uploads directory if it doesn't exist
 UPLOAD_DIR = "uploads"

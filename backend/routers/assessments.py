@@ -209,7 +209,7 @@ def publish_assessment(
     return assessment
 
 
-@router.delete("/{assessment_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{assessment_id}")
 def delete_assessment(
     assessment_id: int,
     db: Session = Depends(get_db),
