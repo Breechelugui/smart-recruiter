@@ -34,6 +34,33 @@ try:
 except Exception as e:
     logger.error(f"Seeding failed: {e}")
 
+# Add new columns for multiple answer questions
+try:
+    import psycopg2
+    conn = psycopg2.connect(settings.database_url)
+    cursor = conn.cursor()
+    
+    # Add correct_answers column to questions table
+    try:
+        cursor.execute('ALTER TABLE questions ADD COLUMN correct_answers JSONB;')
+        conn.commit()
+        logger.info("Added correct_answers column to questions table")
+    except psycopg2.errors.DuplicateColumn:
+        logger.info("correct_answers column already exists")
+    
+    # Add selected_answers column to answers table
+    try:
+        cursor.execute('ALTER TABLE answers ADD COLUMN selected_answers JSONB;')
+        conn.commit()
+        logger.info("Added selected_answers column to answers table")
+    except psycopg2.errors.DuplicateColumn:
+        logger.info("selected_answers column already exists")
+    
+    conn.close()
+    logger.info("Database schema update completed")
+except Exception as e:
+    logger.error(f"Database schema update failed: {e}")
+
 # Create uploads directory if it doesn't exist
 UPLOAD_DIR = "uploads"
 if not os.path.exists(UPLOAD_DIR):
