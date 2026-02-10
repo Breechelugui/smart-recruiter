@@ -4,6 +4,7 @@ import PageWrapper from "../../../components/layout/PageWrapper";
 import Button from "../../../components/common/Button";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
 import { fetchAssessments, deleteAssessment } from "../../assessments/assessmentSlice";
+import { getQuestionTypeInfo, detectQuestionType } from "../../../utils/questionTypes";
 
 export default function RecruiterAssessments() {
   const dispatch = useAppDispatch();
@@ -16,6 +17,7 @@ export default function RecruiterAssessments() {
   }, [dispatch]);
 
   const handleDeleteAssessment = async (assessmentId, assessmentTitle) => {
+    console.log('Attempting to delete assessment:', { assessmentId, assessmentTitle });
     const confirmed = window.confirm(
       `Are you sure you want to delete "${assessmentTitle}"? This action cannot be undone and will remove all associated questions, invitations, and submissions.`
     );
@@ -24,12 +26,40 @@ export default function RecruiterAssessments() {
       setDeletingId(assessmentId);
       try {
         await dispatch(deleteAssessment(assessmentId)).unwrap();
+        console.log('Assessment deleted successfully');
       } catch (error) {
-        alert(`Failed to delete assessment: ${error}`);
+        console.error('Delete assessment error:', error);
+        const errorMessage = error?.message || error?.detail || typeof error === 'string' ? error : 'Unknown error occurred';
+        alert(`Failed to delete assessment: ${errorMessage}`);
       } finally {
         setDeletingId(null);
       }
     }
+  };
+
+  const getQuestionTypeBreakdown = (questions) => {
+    if (!questions || questions.length === 0) return { total: 0, types: [] };
+    
+    const typeCounts = {};
+    questions.forEach(question => {
+      const type = detectQuestionType(question);
+      typeCounts[type] = (typeCounts[type] || 0) + 1;
+    });
+
+    const types = Object.entries(typeCounts).map(([type, count]) => {
+      const typeInfo = getQuestionTypeInfo(type);
+      return {
+        type,
+        count,
+        icon: typeInfo.icon,
+        label: typeInfo.label
+      };
+    });
+
+    return {
+      total: questions.length,
+      types
+    };
   };
 
   return (
@@ -71,7 +101,28 @@ export default function RecruiterAssessments() {
                     {assessment.title}
                   </td>
                   <td className="px-6 py-4">
-                    {assessment.questions?.length || 0}
+                    {(() => {
+                      const breakdown = getQuestionTypeBreakdown(assessment.questions);
+                      if (breakdown.total === 0) return '0';
+                      
+                      return (
+                        <div className="flex flex-col space-y-1">
+                          <span className="font-medium">{breakdown.total} questions</span>
+                          <div className="flex flex-wrap gap-1">
+                            {breakdown.types.map((typeInfo, idx) => (
+                              <span
+                                key={idx}
+                                className="inline-flex items-center px-2 py-1 rounded-full text-xs font-medium bg-gray-100 text-gray-700"
+                                title={`${typeInfo.label}: ${typeInfo.count}`}
+                              >
+                                <span className="mr-1">{typeInfo.icon}</span>
+                                {typeInfo.count}
+                              </span>
+                            ))}
+                          </div>
+                        </div>
+                      );
+                    })()}
                   </td>
                   <td className="px-6 py-4">
                     {assessment.time_limit ? `${assessment.time_limit} mins` : '-'}

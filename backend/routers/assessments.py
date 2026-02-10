@@ -230,8 +230,16 @@ def delete_assessment(
             detail="Not authorized to delete this assessment"
         )
     
-    db.delete(assessment)
-    db.commit()
+    try:
+        db.delete(assessment)
+        db.commit()
+    except Exception as e:
+        db.rollback()
+        print(f"Error deleting assessment {assessment_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to delete assessment: {str(e)}"
+        )
     
     return None
 

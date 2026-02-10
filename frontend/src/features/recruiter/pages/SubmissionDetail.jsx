@@ -1,9 +1,11 @@
 import { useEffect, useState } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import PageWrapper from "../../../components/layout/PageWrapper";
+import Button from "../../../components/common/Button";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
-import { fetchSubmissions, submitSubmission } from "../../submissions/submissionsSlice";
 import { fetchAssessments } from "../../assessments/assessmentSlice";
+import { fetchSubmissions } from "../../submissions/submissionsSlice";
+import { detectQuestionType, isCodingQuestion, isMultipleChoiceQuestion, isMultipleAnswerQuestion } from "../../../utils/questionTypes";
 import BackToDashboardButton from "../../../components/common/BackToDashboardButton";
 import { Editor } from "@monaco-editor/react";
 
@@ -37,7 +39,7 @@ export default function SubmissionDetail() {
         sub.answers.forEach(answer => {
           // For coding questions, use code_solution, otherwise use answer_text
           const question = assessments.find(a => a.id === sub.assessment_id)?.questions?.find(q => q.id === answer.question_id);
-          if (question?.question_type === 'coding') {
+          if (isCodingQuestion(question)) {
             // Try code_solution first, then answer_text as fallback
             answersObj[answer.question_id] = answer.code_solution || answer.answer_text || '';
           } else {
@@ -217,11 +219,11 @@ export default function SubmissionDetail() {
               {/* Answer display */}
               <div className="mt-4">
                 <p className="text-xs font-semibold text-slate-500 mb-2">Candidate Answer:</p>
-                {q.question_type === "multiple_choice" ? (
+                {isMultipleChoiceQuestion(q) ? (
                   <p className="text-sm text-slate-700">
                     Selected: <span className="font-semibold">{answers[q.id] || "Not answered"}</span>
                   </p>
-                ) : q.question_type === "coding" ? (
+                ) : isCodingQuestion(q) ? (
                   <Editor
                     height="200px"
                     defaultLanguage="javascript"

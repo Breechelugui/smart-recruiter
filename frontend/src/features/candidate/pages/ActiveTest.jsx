@@ -1,12 +1,13 @@
-import { useEffect, useState, useMemo, useRef } from "react";
+import React, { useEffect, useState, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import PageWrapper from "../../../components/layout/PageWrapper";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
-import { fetchSubmissions, fetchSubmissionById, submitSubmission } from "../../submissions/submissionsSlice";
-import { saveAnswer } from "../../submissions/submissionsSlice";
+import { fetchSubmissions, saveAnswer, fetchSubmissionById, submitSubmission } from "../../submissions/submissionsSlice";
+import { fetchAssessments } from "../../assessments/assessmentSlice";
 import BackToDashboardButton from "../../../components/common/BackToDashboardButton";
 import CountdownTimer from "../../../components/common/CountdownTimer";
 import { Editor } from "@monaco-editor/react";
+import { detectQuestionType, isCodingQuestion, isMultipleChoiceQuestion, isMultipleAnswerQuestion } from "../../../utils/questionTypes";
 
 export default function ActiveTest() {
   const { id: submissionId } = useParams();
@@ -114,32 +115,60 @@ export default function ActiveTest() {
     if (submission.status === 'in_progress') {
       // Save each answer individually using the proper API
       for (const [answerKey, answerValue] of Object.entries(answers)) {
-        if (answerValue && answerValue.trim()) {
+        if (answerValue && (typeof answerValue === 'string' ? answerValue.trim() : true)) {
           const [questionId, stepId] = answerKey.split('_');
           const question = questions.find(q => q.id === parseInt(questionId));
           
-          // Combine all steps into a structured answer
-          const bddAnswer = answers[`${questionId}_bdd`] || '';
-          const pseudocodeAnswer = answers[`${questionId}_pseudocode`] || '';
-          const codeAnswer = answers[`${questionId}_code`] || '';
-          
-          const structuredAnswer = {
-            bdd: bddAnswer,
-            pseudocode: pseudocodeAnswer,
-            code: codeAnswer
-          };
+          if (isCodingQuestion(question)) {
+            // Combine all steps into a structured answer
+            const bddAnswer = answers[`${questionId}_bdd`] || '';
+            const pseudocodeAnswer = answers[`${questionId}_pseudocode`] || '';
+            const codeAnswer = answers[`${questionId}_code`] || '';
+            
+            const structuredAnswer = {
+              bdd: bddAnswer,
+              pseudocode: pseudocodeAnswer,
+              code: codeAnswer
+            };
 
-          const answerData = {
-            submission_id: parseInt(submissionId),
-            question_id: parseInt(questionId),
-            answer_text: JSON.stringify(structuredAnswer), // Store structured answer
-            code_solution: codeAnswer // Keep code solution for backward compatibility
-          };
+            const answerData = {
+              submission_id: parseInt(submissionId),
+              question_id: parseInt(questionId),
+              answer_text: JSON.stringify(structuredAnswer), // Store structured answer
+              code_solution: codeAnswer // Keep code solution for backward compatibility
+            };
 
-          try {
-            await dispatch(saveAnswer(answerData)).unwrap();
-          } catch (error) {
-            console.error("Failed to save answer:", error);
+            try {
+              await dispatch(saveAnswer(answerData)).unwrap();
+            } catch (error) {
+              console.error("Failed to save answer:", error);
+            }
+          } else if (isMultipleAnswerQuestion(question)) {
+            // Handle multiple answer questions
+            const answerData = {
+              submission_id: parseInt(submissionId),
+              question_id: parseInt(questionId),
+              selected_answers: Array.isArray(answerValue) ? answerValue : [answerValue]
+            };
+
+            try {
+              await dispatch(saveAnswer(answerData)).unwrap();
+            } catch (error) {
+              console.error("Failed to save multiple answer:", error);
+            }
+          } else {
+            // Handle multiple choice and subjective questions
+            const answerData = {
+              submission_id: parseInt(submissionId),
+              question_id: parseInt(questionId),
+              answer_text: answerValue
+            };
+
+            try {
+              await dispatch(saveAnswer(answerData)).unwrap();
+            } catch (error) {
+              console.error("Failed to save answer:", error);
+            }
           }
         }
       }
@@ -342,114 +371,200 @@ function validateLogin(credentials) {
           )}
         </div>
 
-        {/* Whiteboard Editor */}
+        {/* Question Answer Area */}
         <div className="bg-gray-800 rounded-2xl border border-gray-700 shadow-xl">
-          <div className="p-6 border-b border-gray-700">
-            <div className="flex items-center justify-between">
-              <h3 className="text-lg font-semibold text-white">
-                {whiteboardSteps[currentStep].title}
-              </h3>
-              <span className="text-sm text-gray-400">
-                {whiteboardSteps[currentStep].description}
-              </span>
+          {isCodingQuestion(currentQuestion) ? (
+            // Coding Question with BDD/Pseudocode/Code steps
+            <div>
+              <div className="p-6 border-b border-gray-700">
+                <div className="flex items-center justify-between">
+                  <h3 className="text-lg font-semibold text-white">
+                    {whiteboardSteps[currentStep].title}
+                  </h3>
+                  <span className="text-sm text-gray-400">
+                    {whiteboardSteps[currentStep].description}
+                  </span>
+                </div>
+              </div>
+              <div className="p-6">
+                {currentStep === 0 || currentStep === 1 ? (
+                  <textarea
+                    value={getCurrentAnswer()}
+                    onChange={(e) => handleAnswerChange(e.target.value)}
+                    placeholder={getPlaceholder()}
+                    className="w-full h-96 px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none font-mono text-sm"
+                  />
+                ) : (
+                  <div className="border border-gray-600 rounded-xl overflow-hidden">
+                    <div className="bg-gray-700 px-4 py-2 border-b border-gray-600 flex items-center justify-between">
+                      <label className="text-sm font-medium text-gray-300">Language:</label>
+                      <select
+                        value={selectedLanguage}
+                        onChange={(e) => setSelectedLanguage(e.target.value)}
+                        className="bg-gray-600 text-white text-sm px-3 py-1 rounded border border-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
+                      >
+                        <option value="javascript">JavaScript</option>
+                        <option value="python">Python</option>
+                        <option value="java">Java</option>
+                        <option value="cpp">C++</option>
+                        <option value="csharp">C#</option>
+                        <option value="typescript">TypeScript</option>
+                        <option value="php">PHP</option>
+                        <option value="ruby">Ruby</option>
+                        <option value="go">Go</option>
+                        <option value="rust">Rust</option>
+                      </select>
+                    </div>
+                    <Editor
+                      height="400px"
+                      language={selectedLanguage}
+                      value={getCurrentAnswer()}
+                      onChange={(value) => handleAnswerChange(value || "")}
+                      theme="vs-dark"
+                      placeholder={getPlaceholder()}
+                      options={{
+                        minimap: { enabled: false },
+                        fontSize: 14,
+                        lineNumbers: "on",
+                        scrollBeyondLastLine: false,
+                        wordWrap: "on",
+                        automaticLayout: true,
+                      }}
+                    />
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-
-          <div className="p-6">
-            {currentStep === 0 || currentStep === 1 ? (
-              // BDD and Pseudocode - Textarea
+          ) : (isMultipleChoiceQuestion(currentQuestion) || isMultipleAnswerQuestion(currentQuestion)) ? (
+            // Multiple Choice/Multiple Answer Question
+            <div className="p-6">
+              <div className="space-y-3">
+                {currentQuestion.options?.map((option, index) => (
+                  <label key={index} className="flex items-center space-x-3 cursor-pointer">
+                    {isMultipleAnswerQuestion(currentQuestion) ? (
+                      <input
+                        type="checkbox"
+                        checked={Array.isArray(getCurrentAnswer()) ? getCurrentAnswer().includes(option) : false}
+                        onChange={(e) => {
+                          const currentAnswers = Array.isArray(getCurrentAnswer()) ? getCurrentAnswer() : [];
+                          if (e.target.checked) {
+                            handleAnswerChange([...currentAnswers, option]);
+                          } else {
+                            handleAnswerChange(currentAnswers.filter(ans => ans !== option));
+                          }
+                        }}
+                        className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500"
+                      />
+                    ) : (
+                      <input
+                        type="radio"
+                        name={`question-${currentQuestion.id}`}
+                        value={option}
+                        checked={getCurrentAnswer() === option}
+                        onChange={(e) => handleAnswerChange(e.target.value)}
+                        className="w-4 h-4 text-purple-600 bg-gray-700 border-gray-600 rounded focus:ring-purple-500"
+                      />
+                    )}
+                    <span className="text-white text-sm">{option}</span>
+                  </label>
+                ))}
+              </div>
+            </div>
+          ) : (
+            // Subjective/Text Question
+            <div className="p-6">
               <textarea
                 value={getCurrentAnswer()}
                 onChange={(e) => handleAnswerChange(e.target.value)}
-                placeholder={getPlaceholder()}
-                className="w-full h-96 px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none font-mono text-sm"
+                placeholder="Enter your answer here..."
+                className="w-full h-96 px-4 py-3 bg-gray-700 border border-gray-600 rounded-xl text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-purple-500 focus:border-transparent resize-none"
               />
-            ) : (
-              // Code - Monaco Editor
-              <div className="border border-gray-600 rounded-xl overflow-hidden">
-                {/* Language Selector */}
-                <div className="bg-gray-700 px-4 py-2 border-b border-gray-600 flex items-center justify-between">
-                  <label className="text-sm font-medium text-gray-300">Language:</label>
-                  <select
-                    value={selectedLanguage}
-                    onChange={(e) => setSelectedLanguage(e.target.value)}
-                    className="bg-gray-600 text-white text-sm px-3 py-1 rounded border border-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  >
-                    <option value="javascript">JavaScript</option>
-                    <option value="python">Python</option>
-                    <option value="java">Java</option>
-                    <option value="cpp">C++</option>
-                    <option value="csharp">C#</option>
-                    <option value="typescript">TypeScript</option>
-                    <option value="php">PHP</option>
-                    <option value="ruby">Ruby</option>
-                    <option value="go">Go</option>
-                    <option value="rust">Rust</option>
-                  </select>
-                </div>
-                <Editor
-                  height="400px"
-                  language={selectedLanguage}
-                  value={getCurrentAnswer()}
-                  onChange={(value) => handleAnswerChange(value || "")}
-                  theme="vs-dark"
-                  placeholder={getPlaceholder()}
-                  options={{
-                    minimap: { enabled: false },
-                    fontSize: 14,
-                    lineNumbers: "on",
-                    scrollBeyondLastLine: false,
-                    wordWrap: "on",
-                    automaticLayout: true,
-                  }}
-                />
-              </div>
-            )}
+            </div>
+          )}
 
-            {/* Navigation */}
-            <div className="flex justify-between mt-6">
-              <button
-                onClick={handlePrev}
-                disabled={currentQuestionIndex === 0 && currentStep === 0}
-                className="px-6 py-3 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200"
-              >
-                Previous
-              </button>
+          {/* Navigation */}
+          <div className="flex justify-between mt-6">
+            <button
+              onClick={handlePrev}
+              disabled={currentQuestionIndex === 0 && currentStep === 0}
+              className="px-6 py-3 bg-gray-700 hover:bg-gray-600 disabled:opacity-50 disabled:cursor-not-allowed text-white font-semibold rounded-xl transition-all duration-200"
+            >
+              Previous
+            </button>
 
-              <div className="flex gap-2">
-                {currentStep < 2 ? (
-                  <button
-                    onClick={handleNext}
-                    className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all duration-200"
-                  >
-                    Next Step
-                  </button>
-                ) : (
-                  <button
-                    onClick={handleSubmit}
-                    className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl transition-all duration-200"
-                  >
-                    {currentQuestionIndex === questions.length - 1 ? 'Submit Assessment' : 'Next Question'}
-                  </button>
-                )}
-              </div>
+            <div className="flex gap-2">
+              {isCodingQuestion(currentQuestion) && currentStep < 2 ? (
+                <button
+                  onClick={handleNext}
+                  className="px-6 py-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-semibold rounded-xl transition-all duration-200"
+                >
+                  Next Step
+                </button>
+              ) : (
+                <button
+                  onClick={handleSubmit}
+                  className="px-6 py-3 bg-gradient-to-r from-green-600 to-green-700 hover:from-green-700 hover:to-green-800 text-white font-semibold rounded-xl transition-all duration-200"
+                >
+                  {currentQuestionIndex === questions.length - 1 ? 'Submit Assessment' : 'Next Question'}
+                </button>
+              )}
             </div>
           </div>
         </div>
 
         {/* Tips */}
         <div className="mt-6 bg-gradient-to-r from-purple-900/50 to-indigo-900/50 rounded-2xl p-6 border border-purple-500/30">
-          <h3 className="text-lg font-semibold text-white mb-4">💡 Whiteboard Tips</h3>
+          <h3 className="text-lg font-semibold text-white mb-4">💡 Tips</h3>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4 text-sm text-gray-300">
-            <div>
-              <strong className="text-purple-400">BDD:</strong> Write clear test scenarios using Given-When-Then format
-            </div>
-            <div>
-              <strong className="text-purple-400">Pseudocode:</strong> Focus on logic and algorithm structure
-            </div>
-            <div>
-              <strong className="text-purple-400">Code:</strong> Implement clean, readable solution
-            </div>
+            {isCodingQuestion(currentQuestion) ? (
+              <React.Fragment>
+                <div>
+                  <strong className="text-purple-400">BDD:</strong> Write clear test scenarios using Given-When-Then format
+                </div>
+                <div>
+                  <strong className="text-purple-400">Pseudocode:</strong> Focus on logic and algorithm structure
+                </div>
+                <div>
+                  <strong className="text-purple-400">Code:</strong> Write clean, efficient, and well-commented code
+                </div>
+              </React.Fragment>
+            ) : isMultipleAnswerQuestion(currentQuestion) ? (
+              <React.Fragment>
+                <div>
+                  <strong className="text-purple-400">Multiple Answers:</strong> Select all correct options
+                </div>
+                <div>
+                  <strong className="text-purple-400">Careful:</strong> Read all options before selecting
+                </div>
+                <div>
+                  <strong className="text-purple-400">Check:</strong> Ensure you've selected all applicable answers
+                </div>
+              </React.Fragment>
+            ) : isMultipleChoiceQuestion(currentQuestion) ? (
+              <React.Fragment>
+                <div>
+                  <strong className="text-purple-400">Single Answer:</strong> Choose the best option
+                </div>
+                <div>
+                  <strong className="text-purple-400">Process:</strong> Eliminate incorrect options first
+                </div>
+                <div>
+                  <strong className="text-purple-400">Confirm:</strong> Double-check your selection before moving on
+                </div>
+              </React.Fragment>
+            ) : (
+              <React.Fragment>
+                <div>
+                  <strong className="text-purple-400">Be Clear:</strong> Express your thoughts concisely
+                </div>
+                <div>
+                  <strong className="text-purple-400">Complete:</strong> Provide comprehensive answers
+                </div>
+                <div>
+                  <strong className="text-purple-400">Review:</strong> Check for clarity and correctness
+                </div>
+              </React.Fragment>
+            )}
           </div>
         </div>
       </div>

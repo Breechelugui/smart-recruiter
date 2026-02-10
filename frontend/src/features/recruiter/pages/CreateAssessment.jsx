@@ -1,8 +1,10 @@
-import { useEffect, useState, useMemo } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import PageWrapper from "../../../components/layout/PageWrapper";
+import Button from "../../../components/common/Button";
 import { useAppDispatch, useAppSelector } from "../../../app/hooks";
-import { fetchAssessments, createAssessment } from "../../assessments/assessmentSlice";
+import { createAssessment } from "../../assessments/assessmentSlice";
+import { QUESTION_TYPES, getQuestionTypeInfo } from "../../../utils/questionTypes";
 import BackToDashboardButton from "../../../components/common/BackToDashboardButton";
 import CodeWarsBrowser from "../components/CodeWarsBrowser";
 
@@ -23,7 +25,7 @@ export default function CreateAssessment() {
   const [questions, setQuestions] = useState([
     {
       question_text: "",
-      question_type: "multiple_choice",
+      question_type: QUESTION_TYPES.MULTIPLE_CHOICE,
       points: 10,
       options: ["", "", "", ""],
     },
@@ -76,7 +78,7 @@ export default function CreateAssessment() {
       ...prev,
       {
         question_text: "",
-        question_type: "multiple_choice",
+        question_type: QUESTION_TYPES.MULTIPLE_CHOICE,
         points: 10,
         options: ["", "", "", ""],
       },
@@ -97,7 +99,8 @@ export default function CreateAssessment() {
         question_type: q.question_type,
         points: q.points,
         time_limit: q.time_limit || 30,
-        ...(q.question_type === "multiple_choice" && { options: q.options }),
+        ...(q.question_type === QUESTION_TYPES.MULTIPLE_CHOICE && { options: q.options }),
+        ...(q.question_type === QUESTION_TYPES.MULTIPLE_ANSWER && { options: q.options, correct_answers: q.correct_answers || [] }),
         ...(q.codewars_kata_id && { codewars_kata_id: q.codewars_kata_id }),
         ...(q.languages && { languages: q.languages }),
         ...(q.difficulty && { difficulty: q.difficulty }),
@@ -237,9 +240,10 @@ export default function CreateAssessment() {
                       onChange={(e) => handleQuestionChange(idx, "question_type", e.target.value)}
                       className="px-3 py-2 border border-slate-200 rounded-lg text-sm"
                     >
-                      <option value="multiple_choice">Multiple Choice</option>
-                      <option value="coding">Coding</option>
-                      <option value="text">Text</option>
+                      <option value={QUESTION_TYPES.MULTIPLE_CHOICE}>Multiple Choice</option>
+                      <option value={QUESTION_TYPES.MULTIPLE_ANSWER}>Multiple Answer</option>
+                      <option value={QUESTION_TYPES.CODING}>Coding</option>
+                      <option value={QUESTION_TYPES.SUBJECTIVE}>Text Answer</option>
                     </select>
                     <input
                       type="number"
@@ -250,7 +254,7 @@ export default function CreateAssessment() {
                       placeholder="Points"
                     />
                   </div>
-                  {q.question_type === "multiple_choice" && (
+                  {(q.question_type === QUESTION_TYPES.MULTIPLE_CHOICE || q.question_type === QUESTION_TYPES.MULTIPLE_ANSWER) && (
                     <div className="space-y-2">
                       {["A", "B", "C", "D"].map((label, oIdx) => (
                         <input

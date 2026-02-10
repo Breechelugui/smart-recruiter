@@ -15,6 +15,7 @@ export const fetchAssessments = createAsyncThunk(
       console.log("=== FETCHING ASSESSMENTS ===");
       const { data } = await apiClient.get("/api/assessments");
       console.log("Assessments fetched:", data.length);
+      console.log("Assessments data:", data);
       
       // Check for newly published assessments and refresh notifications
       const publishedAssessments = data.filter(a => a.status === 'published');
@@ -50,12 +51,15 @@ export const createAssessment = createAsyncThunk(
 export const deleteAssessment = createAsyncThunk(
   "assessments/deleteAssessment",
   async (assessmentId, { rejectWithValue }) => {
+    console.log('Delete thunk called with assessmentId:', assessmentId);
     try {
-      await apiClient.delete(`/api/assessments/${assessmentId}`);
+      const response = await apiClient.delete(`/api/assessments/${assessmentId}`);
+      console.log('Delete API response:', response);
       return assessmentId;
     } catch (err) {
-      const detail = err?.response?.data?.detail;
-      const message = typeof detail === "string" ? detail : JSON.stringify(detail);
+      console.error('Delete assessment error in slice:', err);
+      const detail = err?.response?.data?.detail || err?.message;
+      const message = typeof detail === "string" ? detail : JSON.stringify(detail || err);
       return rejectWithValue(message);
     }
   }

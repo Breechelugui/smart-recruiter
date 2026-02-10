@@ -18,6 +18,7 @@ class AssessmentStatus(str, enum.Enum):
 
 class QuestionType(str, enum.Enum):
     MULTIPLE_CHOICE = "multiple_choice"
+    MULTIPLE_ANSWER = "multiple_answer"
     SUBJECTIVE = "subjective"
     CODING = "coding"
 
@@ -91,7 +92,8 @@ class Question(Base):
     
     # For multiple choice questions
     options = Column(JSON)  # List of options
-    correct_answer = Column(String)  # For multiple choice
+    correct_answer = Column(String)  # For multiple choice (single answer)
+    correct_answers = Column(JSON)  # For multiple answer questions (list of correct answers)
     
     # For coding questions
     codewars_kata_id = Column(String)  # If fetched from Codewars
@@ -155,6 +157,7 @@ class Answer(Base):
     
     # Answer content
     answer_text = Column(Text)  # For subjective and multiple choice
+    selected_answers = Column(JSON)  # For multiple answer questions (list of selected options)
     code_solution = Column(Text)  # For coding questions
     bdd_text = Column(Text)  # BDD for coding questions
     pseudocode = Column(Text)  # Pseudocode for coding questions
