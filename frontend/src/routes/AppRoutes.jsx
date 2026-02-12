@@ -49,7 +49,7 @@ export default function AppRoutes() {
         path="/"
         element={
           auth.isAuthenticated ? (
-            <Navigate to={auth.role === "recruiter" ? "/recruiter" : "/interviewee"} />
+            <Navigate to={auth.role === "RECRUITER" ? "/recruiter" : "/interviewee"} />
           ) : (
             <Navigate to="/login" />
           )

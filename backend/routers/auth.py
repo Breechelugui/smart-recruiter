@@ -23,7 +23,15 @@ router = APIRouter(prefix="/api/auth", tags=["Authentication"])
 @router.post("/register", response_model=UserSchema, status_code=status.HTTP_201_CREATED)
 def register(user_data: UserCreate, db: Session = Depends(get_db)):
     try:
-        logger.info(f"Registration attempt for email: {user_data.email}, username: {user_data.username}")
+        logger.info(f"Registration attempt for email: {user_data.email}, username: {user_data.username}, role: {user_data.role}")
+        
+        # Validate role
+        if user_data.role not in ["RECRUITER", "INTERVIEWEE"]:
+            logger.error(f"Invalid role received: {user_data.role}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid role: {user_data.role}. Role must be 'RECRUITER' or 'INTERVIEWEE'"
+            )
         
         # Check if user already exists
         existing_user = db.query(User).filter(

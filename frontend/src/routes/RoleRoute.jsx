@@ -11,5 +11,7 @@ export default function RoleRoute({ role, children }) {
     return null;
   }
 
-  return auth.role === role ? children : <Navigate to="/login" />;
+  // Convert expected role to uppercase for comparison
+  const expectedRole = role.toUpperCase();
+  return auth.role === expectedRole ? children : <Navigate to="/login" />;
 }

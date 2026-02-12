@@ -38,11 +38,11 @@ export default function Login() {
     const result = await dispatch(login(loginForm));
     if (login.fulfilled.match(result)) {
       const role = result.payload?.user?.role;
-      if (role === "recruiter") {
+      if (role === "RECRUITER") {
         navigate("/recruiter");
         return;
       }
-      if (role === "interviewee") {
+      if (role === "INTERVIEWEE") {
         navigate("/interviewee");
         return;
       }
@@ -53,7 +53,7 @@ export default function Login() {
     const result = await dispatch(
       register({
         ...signupForm,
-        role: userType,
+        role: userType.toUpperCase(),
       })
     );
 
