@@ -114,7 +114,8 @@ class NotificationScheduler:
                         candidate=candidate,
                         assessment=assessment,
                         reminder_type="24_hours",
-                        time_until=assessment.scheduled_start_time
+                        time_until=assessment.scheduled_start_time,
+                        invitation=invitation
                     )
                 
                 # Send 1-hour reminder
@@ -123,7 +124,8 @@ class NotificationScheduler:
                         candidate=candidate,
                         assessment=assessment,
                         reminder_type="1_hour",
-                        time_until=assessment.scheduled_start_time
+                        time_until=assessment.scheduled_start_time,
+                        invitation=invitation
                     )
             
             # If no scheduled start time, send reminder based on invitation acceptance
@@ -135,14 +137,15 @@ class NotificationScheduler:
                         candidate=candidate,
                         assessment=assessment,
                         reminder_type="reminder",
-                        time_until=None
+                        time_until=None,
+                        invitation=invitation
                     )
                     
         except Exception as e:
             logger.error(f"Error sending reminders for invitation {invitation.id}: {e}")
 
     async def _send_reminder_email(self, candidate: User, assessment: Assessment, 
-                                 reminder_type: str, time_until: Optional[datetime]):
+                                 reminder_type: str, time_until: Optional[datetime], invitation: Invitation):
         """Send reminder email to candidate"""
         try:
             if reminder_type == "24_hours":
