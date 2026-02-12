@@ -6,8 +6,8 @@ import enum
 
 
 class UserRole(str, enum.Enum):
-    RECRUITER = "recruiter"
-    INTERVIEWEE = "interviewee"
+    RECRUITER = "RECRUITER"
+    INTERVIEWEE = "INTERVIEWEE"
 
 
 class AssessmentStatus(str, enum.Enum):

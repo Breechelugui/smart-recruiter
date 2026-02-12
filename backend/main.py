@@ -1,6 +1,7 @@
-from fastapi import FastAPI
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import JSONResponse
 from database import engine, Base
 from config import get_settings
 from routers import auth, assessments, invitations, submissions, notifications, codewars, users, analytics
@@ -59,6 +60,15 @@ try:
         except Exception as e:
             logger.info(f"selected_answers column issue: {e}")
         
+        # Fix existing lowercase 'interviewee' values in users table
+        try:
+            cursor.execute("UPDATE users SET role = 'INTERVIEWEE' WHERE role = 'interviewee';")
+            cursor.execute("UPDATE users SET role = 'RECRUITER' WHERE role = 'recruiter';")
+            conn.commit()
+            logger.info("Fixed lowercase role values in users table")
+        except Exception as e:
+            logger.info(f"Role values issue: {e}")
+        
         conn.close()
         logger.info("Database schema update completed")
     except OperationalError as e:
@@ -85,9 +95,19 @@ app = FastAPI(
 # Configure CORS
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[settings.frontend_url, "http://localhost:5173","https://own-app-ten.vercel.app", "https://own-cijus23il-brians-projects-cd82ed89.vercel.app", "http://localhost:5174", "http://localhost:3000", "http://127.0.0.1:5173", "http://127.0.0.1:5174", "http://127.0.0.1:3000"],
+    allow_origins=[
+        settings.frontend_url, 
+        "http://localhost:5173",
+        "https://own-app-ten.vercel.app", 
+        "https://own-cijus23il-brians-projects-cd82ed89.vercel.app", 
+        "http://localhost:5174", 
+        "http://localhost:3000", 
+        "http://127.0.0.1:5173", 
+        "http://127.0.0.1:5174", 
+        "http://127.0.0.1:3000"
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
@@ -103,6 +123,16 @@ app.include_router(notifications.router)
 app.include_router(codewars.router)
 app.include_router(users.router)
 app.include_router(analytics.router)
+
+
+# Global exception handler to ensure CORS headers are always set
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    logger.error(f"Global exception: {str(exc)}")
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error"}
+    )
 
 
 @app.get("/")
