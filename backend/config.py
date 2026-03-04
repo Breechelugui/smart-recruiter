@@ -3,8 +3,8 @@ from functools import lru_cache
 
 
 class Settings(BaseSettings):
-    database_url: str
-    secret_key: str
+    database_url: str = "sqlite:///./app.db"
+    secret_key: str = "change-this-in-production"
     algorithm: str = "HS256"
     access_token_expire_minutes: int = 30
     codewars_base_url: str = "https://www.codewars.com/api/v1"
