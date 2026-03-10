@@ -1,4 +1,4 @@
- const baseURL = import.meta.env.VITE_API_URL || "https://smart-recruiter-backend-9uv4.onrender.com";
+ const baseURL = (import.meta.env.VITE_API_URL || "https://smart-recruiter-backend-9uv4.onrender.com").replace(/\/$/, "");
 
  const buildHeaders = (headers = {}) => {
    const token = localStorage.getItem("access_token");

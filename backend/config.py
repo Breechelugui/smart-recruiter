@@ -1,5 +1,6 @@
 from pydantic_settings import BaseSettings
 from functools import lru_cache
+import os
 
 
 class Settings(BaseSettings):
@@ -15,7 +16,7 @@ class Settings(BaseSettings):
     sendgrid_api_key: str = ""
     
     class Config:
-        env_file = ".env"
+        env_file = os.path.join(os.path.dirname(__file__), '.env')
 
 
 @lru_cache()
