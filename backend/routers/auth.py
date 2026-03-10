@@ -66,11 +66,13 @@ def register(user_data: UserCreate, db: Session = Depends(get_db)):
         # Re-raise HTTP exceptions as they are already properly formatted
         raise
     except Exception as e:
+        import traceback
         logger.error(f"Registration error: {str(e)}")
+        logger.error(f"Traceback: {traceback.format_exc()}")
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error during registration"
+            detail=f"Internal server error during registration: {str(e)}"
         )
 
 

@@ -1,10 +1,19 @@
 """Add missing columns to users table"""
 
-from sqlalchemy import text
-from database import engine
+from sqlalchemy import text, inspect
+from database import engine, Base
 
 def upgrade():
+    # First create all tables if they don't exist
+    Base.metadata.create_all(bind=engine)
+    
     with engine.connect() as conn:
+        # Check if users table exists
+        inspector = inspect(engine)
+        if 'users' not in inspector.get_table_names():
+            print("Users table does not exist, tables created from models")
+            return
+        
         # Add missing columns if they don't exist
         conn.execute(text("""
             ALTER TABLE users 

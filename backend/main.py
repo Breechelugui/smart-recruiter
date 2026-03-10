@@ -25,7 +25,11 @@ try:
 except Exception as e:
     logger.error(f"Migration failed: {e}")
 
-Base.metadata.create_all(bind=engine)
+try:
+    Base.metadata.create_all(bind=engine)
+    logger.info("Database tables created")
+except Exception as e:
+    logger.error(f"Failed to create tables: {e}")
 
 # Seed database with assessments
 try:
@@ -60,12 +64,12 @@ try:
         except Exception as e:
             logger.info(f"selected_answers column issue: {e}")
         
-        # Fix existing lowercase 'interviewee' values in users table
+        # Fix existing invalid role values in users table
         try:
-            cursor.execute("UPDATE users SET role = 'INTERVIEWEE' WHERE role = 'interviewee';")
+            cursor.execute("UPDATE users SET role = 'INTERVIEWEE' WHERE role IN ('interviewee', 'user', 'candidate');")
             cursor.execute("UPDATE users SET role = 'RECRUITER' WHERE role = 'recruiter';")
             conn.commit()
-            logger.info("Fixed lowercase role values in users table")
+            logger.info("Fixed invalid role values in users table")
         except Exception as e:
             logger.info(f"Role values issue: {e}")
         
@@ -128,10 +132,12 @@ app.include_router(analytics.router)
 # Global exception handler to ensure CORS headers are always set
 @app.exception_handler(Exception)
 async def global_exception_handler(request: Request, exc: Exception):
+    import traceback
     logger.error(f"Global exception: {str(exc)}")
+    logger.error(f"Traceback: {traceback.format_exc()}")
     return JSONResponse(
         status_code=500,
-        content={"detail": "Internal server error"}
+        content={"detail": "Internal server error", "error": str(exc)}
     )
 
 
