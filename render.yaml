@@ -1,0 +1,36 @@
+services:
+  # Backend API Service
+  - name: smart-recruiter-api
+    type: web
+    region: oregon
+    runtime: python
+    pythonVersion: "3.11.9"
+    buildCommand: "cd backend && poetry install --no-root"
+    startCommand: "cd backend && uvicorn main:app --host 0.0.0.0 --port $PORT"
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: SECRET_KEY
+        sync: false
+      - key: ALGORITHM
+        value: "HS256"
+      - key: ACCESS_TOKEN_EXPIRE_MINUTES
+        value: "30"
+      - key: SENDGRID_API_KEY
+        sync: false
+      - key: EMAIL_FROM
+        value: "noreply@smartrecruiter.com"
+      - key: FRONTEND_URL
+        sync: false
+    autoDeploy: true
+
+  # Frontend Static Site
+  - name: smart-recruiter-frontend
+    type: static
+    region: oregon
+    buildCommand: "cd frontend && npm run build"
+    publishDir: "frontend/dist"
+    envVars:
+      - key: VITE_API_URL
+        value: "https://smart-recruiter-api.onrender.com"
+    autoDeploy: true
