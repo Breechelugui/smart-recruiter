@@ -1,4 +1,15 @@
-from sqlalchemy import Column, Integer, String, Boolean, DateTime, ForeignKey, Text, JSON, Enum as SQLEnum, Float
+from sqlalchemy import (
+    Column,
+    Integer,
+    String,
+    Boolean,
+    DateTime,
+    ForeignKey,
+    Text,
+    JSON,
+    Enum as SQLEnum,
+    Float,
+)
 from sqlalchemy.orm import relationship
 from sqlalchemy.sql import func
 from database import Base
@@ -8,6 +19,7 @@ import enum
 class UserRole(str, enum.Enum):
     RECRUITER = "RECRUITER"
     INTERVIEWEE = "INTERVIEWEE"
+    FIELD_AGENT = "field_agent"  # Legacy support for existing data
 
 
 class AssessmentStatus(str, enum.Enum):
@@ -51,7 +63,9 @@ class User(Base):
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
-    created_assessments = relationship("Assessment", back_populates="creator", foreign_keys="Assessment.creator_id")
+    created_assessments = relationship(
+        "Assessment", back_populates="creator", foreign_keys="Assessment.creator_id"
+    )
     invitations = relationship("Invitation", back_populates="interviewee")
     submissions = relationship("Submission", back_populates="interviewee")
     feedbacks = relationship("Feedback", back_populates="recruiter")
@@ -64,7 +78,9 @@ class Assessment(Base):
     title = Column(String, nullable=False)
     description = Column(Text)
     time_limit = Column(Integer)  # in minutes
-    scheduled_start_time = Column(DateTime(timezone=True))  # When assessment should start
+    scheduled_start_time = Column(
+        DateTime(timezone=True)
+    )  # When assessment should start
     status = Column(SQLEnum(AssessmentStatus), default=AssessmentStatus.DRAFT)
     creator_id = Column(Integer, ForeignKey("users.id"), nullable=False)
     is_trial = Column(Boolean, default=False)
@@ -73,10 +89,18 @@ class Assessment(Base):
     published_at = Column(DateTime(timezone=True))
 
     # Relationships
-    creator = relationship("User", back_populates="created_assessments", foreign_keys=[creator_id])
-    questions = relationship("Question", back_populates="assessment", cascade="all, delete-orphan")
-    invitations = relationship("Invitation", back_populates="assessment", cascade="all, delete-orphan")
-    submissions = relationship("Submission", back_populates="assessment", cascade="all, delete-orphan")
+    creator = relationship(
+        "User", back_populates="created_assessments", foreign_keys=[creator_id]
+    )
+    questions = relationship(
+        "Question", back_populates="assessment", cascade="all, delete-orphan"
+    )
+    invitations = relationship(
+        "Invitation", back_populates="assessment", cascade="all, delete-orphan"
+    )
+    submissions = relationship(
+        "Submission", back_populates="assessment", cascade="all, delete-orphan"
+    )
 
 
 class Question(Base):
@@ -89,22 +113,26 @@ class Question(Base):
     description = Column(Text)
     points = Column(Integer, default=10)
     order = Column(Integer, default=0)
-    
+
     # For multiple choice questions
     options = Column(JSON)  # List of options
     correct_answer = Column(String)  # For multiple choice (single answer)
-    correct_answers = Column(JSON)  # For multiple answer questions (list of correct answers)
-    
+    correct_answers = Column(
+        JSON
+    )  # For multiple answer questions (list of correct answers)
+
     # For coding questions
     codewars_kata_id = Column(String)  # If fetched from Codewars
     test_cases = Column(JSON)  # For coding challenges
     starter_code = Column(Text)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships
     assessment = relationship("Assessment", back_populates="questions")
-    answers = relationship("Answer", back_populates="question", cascade="all, delete-orphan")
+    answers = relationship(
+        "Answer", back_populates="question", cascade="all, delete-orphan"
+    )
 
 
 class Invitation(Base):
@@ -137,15 +165,19 @@ class Submission(Base):
     submitted_at = Column(DateTime(timezone=True))
     graded_at = Column(DateTime(timezone=True))
     time_taken = Column(Integer)  # in seconds
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
     assessment = relationship("Assessment", back_populates="submissions")
     interviewee = relationship("User", back_populates="submissions")
-    answers = relationship("Answer", back_populates="submission", cascade="all, delete-orphan")
-    feedbacks = relationship("Feedback", back_populates="submission", cascade="all, delete-orphan")
+    answers = relationship(
+        "Answer", back_populates="submission", cascade="all, delete-orphan"
+    )
+    feedbacks = relationship(
+        "Feedback", back_populates="submission", cascade="all, delete-orphan"
+    )
 
 
 class Answer(Base):
@@ -154,25 +186,29 @@ class Answer(Base):
     id = Column(Integer, primary_key=True, index=True)
     submission_id = Column(Integer, ForeignKey("submissions.id"), nullable=False)
     question_id = Column(Integer, ForeignKey("questions.id"), nullable=False)
-    
+
     # Answer content
     answer_text = Column(Text)  # For subjective and multiple choice
-    selected_answers = Column(JSON)  # For multiple answer questions (list of selected options)
+    selected_answers = Column(
+        JSON
+    )  # For multiple answer questions (list of selected options)
     code_solution = Column(Text)  # For coding questions
     bdd_text = Column(Text)  # BDD for coding questions
     pseudocode = Column(Text)  # Pseudocode for coding questions
-    
+
     # Grading
     is_correct = Column(Boolean)
     points_earned = Column(Float, default=0.0)
-    
+
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
 
     # Relationships
     submission = relationship("Submission", back_populates="answers")
     question = relationship("Question", back_populates="answers")
-    feedbacks = relationship("Feedback", back_populates="answer", cascade="all, delete-orphan")
+    feedbacks = relationship(
+        "Feedback", back_populates="answer", cascade="all, delete-orphan"
+    )
 
 
 class Feedback(Base):

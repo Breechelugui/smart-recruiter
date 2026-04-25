@@ -107,7 +107,7 @@ except Exception as e:
             # Fix existing invalid role values in users table
             try:
                 cursor.execute(
-                    "UPDATE users SET role = 'INTERVIEWEE' WHERE role IN ('interviewee', 'user', 'candidate');"
+                    "UPDATE users SET role = 'INTERVIEWEE' WHERE role IN ('interviewee', 'user', 'candidate', 'field_agent');"
                 )
                 cursor.execute(
                     "UPDATE users SET role = 'RECRUITER' WHERE role = 'recruiter';"
