@@ -14,15 +14,16 @@ def upgrade():
             print("Users table does not exist, tables created from models")
             return
         
-        # Add missing columns if they don't exist
-        conn.execute(text("""
-            ALTER TABLE users 
-            ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(255),
-            ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'interviewee',
-            ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true,
-            ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
-        """))
+         # Add missing columns if they don't exist
+         conn.execute(text("""
+             ALTER TABLE users 
+             ADD COLUMN IF NOT EXISTS hashed_password VARCHAR(255) NOT NULL DEFAULT 'invalid_hash_placeholder',
+             ADD COLUMN IF NOT EXISTS profile_picture VARCHAR(255),
+             ADD COLUMN IF NOT EXISTS role VARCHAR(50) DEFAULT 'interviewee',
+             ADD COLUMN IF NOT EXISTS is_active BOOLEAN DEFAULT true,
+             ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+             ADD COLUMN IF NOT EXISTS updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP;
+         """))
         conn.commit()
 
 if __name__ == "__main__":
