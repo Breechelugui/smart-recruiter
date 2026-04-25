@@ -41,6 +41,85 @@ try:
 except Exception as e:
     logger.error(f"Failed to create tables: {e}")
 
+# Add new columns and normalize data BEFORE seeding
+try:
+    import psycopg2
+    from psycopg2 import OperationalError
+
+    try:
+        conn = psycopg2.connect(settings.database_url)
+        cursor = conn.cursor()
+
+        # Verify hashed_password column exists and add if missing
+        cursor.execute("""
+            SELECT column_name
+            FROM information_schema.columns
+            WHERE table_name = 'users' AND column_name = 'hashed_password';
+        """)
+        hashed_password_exists = cursor.fetchone() is not None
+
+        if not hashed_password_exists:
+            print(
+                "⚠️  hashed_password column missing from users table. Adding it now..."
+            )
+            try:
+                cursor.execute("""
+                    ALTER TABLE users
+                    ADD COLUMN hashed_password VARCHAR(255) NOT NULL DEFAULT 'temp_hash_please_reset';
+                """)
+                conn.commit()
+                print("✅ hashed_password column added successfully")
+            except Exception as e:
+                print(f"❌ Failed to add hashed_password: {e}")
+                conn.rollback()
+        else:
+            print("✅ hashed_password column exists")
+
+        # Add correct_answers column to questions table
+        try:
+            cursor.execute(
+                "ALTER TABLE questions ADD COLUMN IF NOT EXISTS correct_answers JSONB;"
+            )
+            conn.commit()
+            print("✅ correct_answers column check done")
+        except Exception as e:
+            print(f"❌ correct_answers column issue: {e}")
+
+        # Add selected_answers column to answers table
+        try:
+            cursor.execute(
+                "ALTER TABLE answers ADD COLUMN IF NOT EXISTS selected_answers JSONB;"
+            )
+            conn.commit()
+            print("✅ selected_answers column check done")
+        except Exception as e:
+            print(f"❌ selected_answers column issue: {e}")
+
+        # Fix existing invalid role values in users table
+        try:
+            cursor.execute(
+                "UPDATE users SET role = 'INTERVIEWEE' WHERE role IN ('interviewee', 'user', 'candidate', 'field_agent');"
+            )
+            cursor.execute(
+                "UPDATE users SET role = 'RECRUITER' WHERE role = 'recruiter';"
+            )
+            conn.commit()
+            print("✅ Invalid role values fixed")
+        except Exception as e:
+            print(f"❌ Role values issue: {e}")
+
+        conn.close()
+        print("🎉 Database schema update completed")
+    except OperationalError as e:
+        logger.warning(f"Could not connect to database for schema update: {e}")
+    except Exception as e:
+        logger.error(f"Database schema update failed: {e}")
+
+except ImportError as e:
+    logger.warning(f"psycopg2 not available for schema update: {e}")
+except Exception as e:
+    logger.error(f"Unexpected error during schema update: {e}")
+
 # Seed database with assessments
 try:
     from seed_katas import seed
@@ -49,85 +128,6 @@ try:
     logger.info("Database seeding completed")
 except Exception as e:
     logger.error(f"Seeding failed: {e}")
-
-    # Add new columns for multiple answer questions
-    try:
-        import psycopg2
-        from psycopg2 import OperationalError
-
-        try:
-            conn = psycopg2.connect(settings.database_url)
-            cursor = conn.cursor()
-
-            # Verify hashed_password column exists and add if missing
-            cursor.execute("""
-                SELECT column_name 
-                FROM information_schema.columns 
-                WHERE table_name = 'users' AND column_name = 'hashed_password';
-            """)
-            hashed_password_exists = cursor.fetchone() is not None
-
-            if not hashed_password_exists:
-                print(
-                    "⚠️  hashed_password column missing from users table. Adding it now..."
-                )
-                try:
-                    cursor.execute("""
-                        ALTER TABLE users 
-                        ADD COLUMN hashed_password VARCHAR(255) NOT NULL DEFAULT 'temp_hash_please_reset';
-                    """)
-                    conn.commit()
-                    print("✅ hashed_password column added successfully")
-                except Exception as e:
-                    print(f"❌ Failed to add hashed_password: {e}")
-                    conn.rollback()
-            else:
-                print("✅ hashed_password column exists")
-
-            # Add correct_answers column to questions table
-            try:
-                cursor.execute(
-                    "ALTER TABLE questions ADD COLUMN IF NOT EXISTS correct_answers JSONB;"
-                )
-                conn.commit()
-                print("✅ correct_answers column check done")
-            except Exception as e:
-                print(f"❌ correct_answers column issue: {e}")
-
-            # Add selected_answers column to answers table
-            try:
-                cursor.execute(
-                    "ALTER TABLE answers ADD COLUMN IF NOT EXISTS selected_answers JSONB;"
-                )
-                conn.commit()
-                print("✅ selected_answers column check done")
-            except Exception as e:
-                print(f"❌ selected_answers column issue: {e}")
-
-            # Fix existing invalid role values in users table
-            try:
-                cursor.execute(
-                    "UPDATE users SET role = 'INTERVIEWEE' WHERE role IN ('interviewee', 'user', 'candidate', 'field_agent');"
-                )
-                cursor.execute(
-                    "UPDATE users SET role = 'RECRUITER' WHERE role = 'recruiter';"
-                )
-                conn.commit()
-                print("✅ Invalid role values fixed")
-            except Exception as e:
-                print(f"❌ Role values issue: {e}")
-
-            conn.close()
-            print("🎉 Database schema update completed")
-        except OperationalError as e:
-            logger.warning(f"Could not connect to database for schema update: {e}")
-        except Exception as e:
-            logger.error(f"Database schema update failed: {e}")
-
-    except ImportError as e:
-        logger.warning(f"psycopg2 not available for schema update: {e}")
-    except Exception as e:
-        logger.error(f"Unexpected error during schema update: {e}")
 
 # Create uploads directory if it doesn't exist
 UPLOAD_DIR = "uploads"
